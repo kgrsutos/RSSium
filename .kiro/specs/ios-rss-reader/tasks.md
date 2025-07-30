@@ -28,7 +28,7 @@
   - Write unit tests for ViewModel business logic
   - _Requirements: 1.1, 1.4, 2.2, 5.1, 5.3, 5.4_
 
-- [ ] 5. Create feed list user interface
+- [x] 5. Create feed list user interface
   - Build FeedListView with SwiftUI List component
   - Implement feed display with titles and unread badges
   - Add swipe-to-delete and long-press actions for feed management
