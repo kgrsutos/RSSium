@@ -13,7 +13,7 @@
   - Write unit tests for RSS parsing functionality
   - _Requirements: 1.1, 1.2, 4.4_
 
-- [ ] 3. Create persistence service layer
+- [x] 3. Create persistence service layer
   - Implement PersistenceService for Core Data operations
   - Add CRUD operations for feeds and articles
   - Implement background context handling for data operations
