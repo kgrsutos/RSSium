@@ -78,7 +78,17 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 - **Unit Tests**: Located in `RSSium/RSSiumTests/` using Swift Testing framework (@Test attributes) 
 - **UI Tests**: Located in `RSSium/RSSiumUITests/` using XCTest framework
 - **Service Layer**: Comprehensive test coverage for `PersistenceService` and `RSSService`
+- **ViewModel Layer**: Tests for `FeedListViewModel` and `AddFeedViewModel` business logic
 - **In-Memory Testing**: Tests use in-memory Core Data stack for isolation and speed
+
+### Running Tests
+
+```bash
+# Run ViewModel tests specifically
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/FeedListViewModelTests
+
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/AddFeedViewModelTests
+```
 
 ### Navigation Structure (Planned)
 ```
@@ -89,15 +99,50 @@ TabView
 └── SettingsView
 ```
 
+### ViewModel Layer Architecture
+
+The ViewModel layer implements MVVM pattern with reactive data binding:
+
+- **FeedListViewModel**: Main feed management with `@Published` properties for UI state
+  - Manages feed list, loading states, and error handling
+  - Provides feed CRUD operations with validation
+  - Tracks unread counts per feed with automatic updates
+  - Handles background refresh operations for all feeds
+- **AddFeedViewModel**: Specialized for feed addition workflow
+  - Real-time URL validation and feed preview
+  - Custom title override functionality
+  - Form state management with submission validation
+
+### ViewModel Usage Patterns
+
+```swift
+// FeedListViewModel - Main feed management
+@StateObject private var feedListViewModel = FeedListViewModel()
+
+// Access reactive properties
+feedListViewModel.feeds // @Published [Feed]
+feedListViewModel.isLoading // @Published Bool
+feedListViewModel.errorMessage // @Published String?
+
+// Async operations
+await feedListViewModel.addFeed(url: urlString)
+await feedListViewModel.refreshAllFeeds()
+feedListViewModel.deleteFeed(feed)
+
+// AddFeedViewModel - Feed addition
+@StateObject private var addFeedViewModel = AddFeedViewModel()
+await addFeedViewModel.validateFeed() // Previews feed before adding
+```
+
 ## Implementation Status
 
 Track detailed progress in `.kiro/specs/ios-rss-reader/tasks.md`. Currently completed:
 - [x] 1. Core Data models and stack setup
 - [x] 2. RSS parsing service with RSS 2.0 and Atom support
 - [x] 3. Persistence service layer with comprehensive CRUD operations
+- [x] 4. Feed management ViewModels with ObservableObject protocol
 
 Next priorities:
-- [ ] 4. Feed management ViewModels (ObservableObject classes)
 - [ ] 5. SwiftUI feed list interface
 - [ ] 6. Article management system with ViewModels
 
@@ -145,7 +190,15 @@ let channel = try await rssService.fetchAndParseFeed(from: urlString)
 Standard Xcode iOS app organization:
 - Source files: `RSSium/RSSium/`
 - Project file: `RSSium/RSSium.xcodeproj`
-- Models: Core Data entities with extensions
-- Services: Data and network services (fully implemented)
+- Models: Core Data entities with extensions (implemented)
+- Services: Data and network services (implemented)
+- ViewModels: ObservableObject classes (implemented)
 - Views: SwiftUI views (to be implemented)
-- ViewModels: ObservableObject classes (to be implemented)
+
+### Important Implementation Notes
+
+- **UUID Handling**: Feed.id is optional in Core Data - always check for nil with `guard let feedId = feed.id else { return }`
+- **MainActor**: ViewModels are marked `@MainActor` for UI updates on main thread
+- **Background Operations**: Use `PersistenceService.performBackgroundTask` for heavy Core Data operations
+- **Error Propagation**: ViewModels expose `@Published errorMessage` for UI error display
+- **Async Patterns**: ViewModels use async/await for network operations, avoid blocking UI

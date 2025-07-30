@@ -20,7 +20,7 @@
   - Write unit tests for persistence operations
   - _Requirements: 1.1, 1.3, 5.2, 6.1_
 
-- [ ] 4. Build feed management ViewModels
+- [x] 4. Build feed management ViewModels
   - Create FeedListViewModel with ObservableObject protocol
   - Implement add feed functionality with validation
   - Add feed deletion with confirmation logic
