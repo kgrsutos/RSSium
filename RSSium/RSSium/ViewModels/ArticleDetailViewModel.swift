@@ -42,51 +42,10 @@ class ArticleDetailViewModel: ObservableObject {
             return
         }
         
-        // Convert HTML content to AttributedString with proper styling
-        if let data = content.data(using: .utf8) {
-            do {
-                let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
-                    .documentType: NSAttributedString.DocumentType.html,
-                    .characterEncoding: String.Encoding.utf8.rawValue
-                ]
-                
-                if let nsAttributedString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
-                    var attributedString = AttributedString(nsAttributedString)
-                    
-                    // Apply consistent styling for better readability
-                    attributedString.font = .body
-                    attributedString.foregroundColor = .primary
-                    
-                    // Enhance specific formatting
-                    for run in attributedString.runs {
-                        let range = run.range
-                        
-                        // Style links
-                        if attributedString[range].link != nil {
-                            attributedString[range].foregroundColor = .blue
-                            attributedString[range].underlineStyle = .single
-                        }
-                        
-                        // Ensure proper font sizes for headings
-                        if let nsFont = attributedString[range].uiKit.font {
-                            let pointSize = nsFont.pointSize
-                            if pointSize > 20 {
-                                attributedString[range].font = .title2
-                            } else if pointSize > 16 {
-                                attributedString[range].font = .headline
-                            }
-                        }
-                    }
-                    
-                    formattedContent = attributedString
-                } else {
-                    // Fallback to plain text if HTML parsing fails
-                    formattedContent = AttributedString(stripHTML(from: content))
-                }
-            }
-        } else {
-            formattedContent = AttributedString(content)
-        }
+        // For now, use simple HTML stripping to avoid AttributedString conversion issues
+        // This ensures stability while preserving readable content
+        let cleanedContent = stripHTML(from: content)
+        formattedContent = AttributedString(cleanedContent)
     }
     
     private func stripHTML(from string: String) -> String {
