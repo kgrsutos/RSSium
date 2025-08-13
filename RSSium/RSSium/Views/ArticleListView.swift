@@ -12,16 +12,38 @@ struct ArticleListView: View {
     
     var body: some View {
         ZStack {
-                articleList
+            // Background gradient
+            LinearGradient(
+                gradient: Gradient(colors: [Color(.systemBackground), Color(.systemGray6).opacity(0.2)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            articleList
                 
-                if viewModel.isLoading {
-                    ProgressView("Loading articles...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black.opacity(0.3))
+            if viewModel.isLoading {
+                ZStack {
+                    Color.black.opacity(0.2)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                        
+                        Text("Loading articles...")
+                            .font(.system(.headline, design: .rounded))
+                            .foregroundColor(.primary)
+                    }
+                    .padding(30)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .shadow(radius: 10)
                 }
             }
-            .navigationTitle(viewModel.feedTitle)
-            .navigationBarTitleDisplayMode(.large)
+        }
+        .navigationTitle(viewModel.feedTitle)
+        .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 toolbarContent
             }
@@ -72,87 +94,107 @@ struct ArticleListView: View {
                     .disabled(!networkMonitor.isConnected)
                 }
             } else if !networkMonitor.isConnected {
-                ContentUnavailableView(
-                    "No Internet Connection",
-                    systemImage: "wifi.slash",
-                    description: Text("Connect to the internet to refresh articles")
-                )
+                VStack(spacing: 20) {
+                    Image(systemName: "wifi.slash")
+                        .font(.system(size: 60, weight: .light))
+                        .foregroundStyle(.red)
+                        .symbolEffect(.pulse)
+                    
+                    VStack(spacing: 8) {
+                        Text("No Internet Connection")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Connect to the internet to refresh articles")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                }
+                .padding(.top, -50)
             } else {
-                ContentUnavailableView(
-                    "No Articles",
-                    systemImage: "newspaper",
-                    description: Text(viewModel.selectedFilter == .unread ? "No unread articles" : "No articles available")
-                )
+                VStack(spacing: 20) {
+                    Image(systemName: "newspaper")
+                        .font(.system(size: 60, weight: .light))
+                        .foregroundStyle(LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .symbolEffect(.bounce.byLayer, options: .speed(0.5).repeat(.continuous))
+                    
+                    VStack(spacing: 8) {
+                        Text("No Articles")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Text(viewModel.selectedFilter == .unread ? "No unread articles" : "No articles available")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                }
+                .padding(.top, -50)
             }
         } else {
-            List {
-                ForEach(viewModel.articles) { article in
-                    NavigationLink(destination: ArticleDetailView(article: article)) {
-                        ArticleRowView(article: article) {
-                            viewModel.toggleReadState(for: article)
-                        }
-                    }
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .onAppear {
-                        // Load more when approaching the end of the list
-                        if article.id == viewModel.articles.last?.id {
-                            viewModel.loadMoreArticles()
-                        }
-                    }
-                    .swipeActions(edge: .leading) {
-                        Button {
-                            viewModel.toggleReadState(for: article)
-                        } label: {
-                            Label(article.isRead ? "Mark Unread" : "Mark Read", 
-                                  systemImage: article.isRead ? "circle" : "circle.fill")
-                        }
-                        .tint(article.isRead ? .blue : .green)
-                    }
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            viewModel.deleteArticle(article)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                    .contextMenu {
-                        Button {
-                            viewModel.toggleReadState(for: article)
-                        } label: {
-                            Label(article.isRead ? "Mark as Unread" : "Mark as Read", 
-                                  systemImage: article.isRead ? "circle" : "checkmark.circle.fill")
-                        }
-                        
-                        if let url = article.url {
-                            Button {
-                                UIApplication.shared.open(url)
-                            } label: {
-                                Label("Open in Browser", systemImage: "safari")
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.articles) { article in
+                        NavigationLink(destination: ArticleDetailView(article: article)) {
+                            ArticleCardView(article: article) {
+                                viewModel.toggleReadState(for: article)
                             }
                         }
-                        
-                        Button(role: .destructive) {
-                            viewModel.deleteArticle(article)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                        .buttonStyle(PlainButtonStyle())
+.onAppear {
+                            // Load more when approaching the end of the list
+                            if article.id == viewModel.articles.last?.id {
+                                viewModel.loadMoreArticles()
+                            }
+                        }
+.contextMenu {
+                            Button {
+                                viewModel.toggleReadState(for: article)
+                            } label: {
+                                Label(article.isRead ? "Mark as Unread" : "Mark as Read", 
+                                      systemImage: article.isRead ? "circle" : "checkmark.circle.fill")
+                            }
+                            
+                            if let url = article.url {
+                                Button {
+                                    UIApplication.shared.open(url)
+                                } label: {
+                                    Label("Open in Browser", systemImage: "safari")
+                                }
+                            }
+                            
+                            Button(role: .destructive) {
+                                viewModel.deleteArticle(article)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
-                }
-                .onDelete(perform: viewModel.deleteArticles)
-                
-                // Show loading indicator when loading more articles
-                if viewModel.isLoadingMore {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .padding()
-                        Spacer()
+
+                    // Show loading indicator when loading more articles
+                    if viewModel.isLoadingMore {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                                .padding()
+                            Spacer()
+                        }
+                        .padding()
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     }
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
-            .listStyle(.plain)
         }
     }
     
@@ -200,7 +242,7 @@ struct ArticleListView: View {
     }
 }
 
-struct ArticleRowView: View {
+struct ArticleCardView: View {
     let article: Article
     let onToggleRead: () -> Void
     
@@ -208,73 +250,124 @@ struct ArticleRowView: View {
     private var articleTitle: String { article.title ?? "Untitled" }
     private var articleSummary: String? {
         if let summary = article.summary, !summary.isEmpty {
-            return String(summary.prefix(200))
+            return String(summary.prefix(150))
         } else if let content = article.content?.stripHTML() {
-            return String(content.prefix(200))
+            return String(content.prefix(150))
         }
         return nil
     }
     
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            // Read status indicator
-            Circle()
-                .fill(article.isRead ? Color.clear : Color.accentColor)
-                .frame(width: 10, height: 10)
-                .overlay(
-                    Circle()
-                        .stroke(article.isRead ? Color.secondary : Color.accentColor, lineWidth: 1.5)
-                )
-                .onTapGesture {
-                    onToggleRead()
-                }
-                .accessibilityLabel(article.isRead ? "Mark as unread" : "Mark as read")
-                .accessibilityHint("Double tap to toggle read status")
-            
-            VStack(alignment: .leading, spacing: 4) {
-                // Title
-                Text(articleTitle)
-                    .font(.system(.headline, design: .default))
-                    .foregroundColor(article.isRead ? .secondary : .primary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                
-                // Summary (only show if available to save space)
-                if let summary = articleSummary {
-                    Text(summary)
-                        .font(.system(.subheadline, design: .default))
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                
-                // Metadata row
-                HStack(spacing: 4) {
-                    if let author = article.author, !author.isEmpty {
-                        Text(author)
-                            .font(.system(.caption, design: .default))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                // Read status indicator with enhanced design
+                VStack {
+                    Button(action: onToggleRead) {
+                        let circleColor = article.isRead ? Color.gray.opacity(0.3) : Color.blue
+                        let iconColor = article.isRead ? Color.gray : Color.white
+                        
+                        ZStack {
+                            Circle()
+                                .fill(circleColor)
+                                .frame(width: 20, height: 20)
+                            
+                            Image(systemName: article.isRead ? "checkmark" : "circle")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(iconColor)
+                        }
                     }
-                    
-                    if article.author != nil && article.publishedDate != nil {
-                        Text("•")
-                            .font(.system(.caption, design: .default))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    if let publishedDate = article.publishedDate {
-                        Text(publishedDate.relativeFormat)
-                            .font(.system(.caption, design: .default))
-                            .foregroundColor(.secondary)
-                    }
+                    .accessibilityLabel(article.isRead ? "Mark as unread" : "Mark as read")
+                    .accessibilityHint("Tap to toggle read status")
                     
                     Spacer(minLength: 0)
                 }
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    // Title with enhanced typography
+                    Text(articleTitle)
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .foregroundColor(article.isRead ? .secondary : .primary)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                    
+                    // Summary with better styling
+                    if let summary = articleSummary, !summary.isEmpty {
+                        Text(summary)
+                            .font(.system(.subheadline, design: .default))
+                            .foregroundColor(.secondary)
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                    }
+                    
+                    // Enhanced metadata row with icons
+                    HStack(spacing: 8) {
+                        if let author = article.author, !author.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.blue)
+                                
+                                Text(author)
+                                    .font(.system(.caption, design: .rounded, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        
+                        if article.author != nil && article.publishedDate != nil {
+                            Text("•")
+                                .font(.system(.caption2))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        if let publishedDate = article.publishedDate {
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.green)
+                                
+                                Text(publishedDate.relativeFormat)
+                                    .font(.system(.caption, design: .rounded, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        // Reading state indicator
+                        if !article.isRead {
+                            Text("NEW")
+                                .font(.system(.caption2, design: .rounded, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(.orange)
+                                )
+                        }
+                    }
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
         }
-        .padding(.vertical, 8)
+        .background {
+            let shadowOpacity = article.isRead ? 0.02 : 0.05
+            let shadowRadius: CGFloat = article.isRead ? 2 : 5
+            
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.regularMaterial)
+                .overlay {
+                    if !article.isRead {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(.blue.opacity(0.3), lineWidth: 2)
+                    }
+                }
+                .shadow(color: Color.black.opacity(shadowOpacity), radius: shadowRadius, x: 0, y: 2)
+        }
+        .opacity(article.isRead ? 0.7 : 1.0)
+        .scaleEffect(article.isRead ? 0.98 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: article.isRead)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(articleAccessibilityLabel)

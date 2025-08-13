@@ -10,106 +10,193 @@ struct ArticleDetailView: View {
     }
     
     var body: some View {
-        ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Article Header
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(viewModel.articleTitle)
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.leading)
-                            .dynamicTypeSize(...DynamicTypeSize.accessibility3)
-                            .accessibilityAddTraits(.isHeader)
-                        
-                        HStack {
-                            Text(viewModel.feedTitle)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(.systemBackground),
+                    Color(.systemGray6).opacity(0.15)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Enhanced Article Header with gradient background
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Header background with gradient
+                        ZStack {
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.8), Color.purple.opacity(0.6)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .overlay {
+                                // Subtle pattern overlay
+                                Rectangle()
+                                    .fill(.ultraThinMaterial)
+                            }
                             
-                            Spacer()
-                            
-                            Text(viewModel.publishedDate)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-                        }
-                        
-                        if let author = viewModel.articleAuthor {
-                            Text("By \(author)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Article Title
+                                Text(viewModel.articleTitle)
+                                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .multilineTextAlignment(.leading)
+                                    .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
+                                    .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+                                    .accessibilityAddTraits(.isHeader)
+                                
+                                // Metadata with icons
+                                VStack(alignment: .leading, spacing: 8) {
+                                    // Feed source
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "rss.circle.fill")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.9))
+                                        
+                                        Text(viewModel.feedTitle)
+                                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.9))
+                                            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                                    }
+                                    
+                                    HStack(spacing: 16) {
+                                        // Publication date
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "calendar")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(.white.opacity(0.8))
+                                            
+                                            Text(viewModel.publishedDate)
+                                                .font(.system(.caption, design: .rounded))
+                                                .foregroundColor(.white.opacity(0.8))
+                                                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                                        }
+                                        
+                                        // Author if available
+                                        if let author = viewModel.articleAuthor {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: "person.fill")
+                                                    .font(.system(size: 14, weight: .medium))
+                                                    .foregroundColor(.white.opacity(0.8))
+                                                
+                                                Text(author)
+                                                    .font(.system(.caption, design: .rounded))
+                                                    .foregroundColor(.white.opacity(0.8))
+                                                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        // Read status indicator
+                                        HStack(spacing: 4) {
+                                            Image(systemName: viewModel.article.isRead ? "checkmark.circle.fill" : "circle")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(viewModel.article.isRead ? .green : .white.opacity(0.8))
+                                                .symbolEffect(.bounce, value: !viewModel.article.isRead)
+                                            
+                                            Text(viewModel.article.isRead ? "Read" : "Unread")
+                                                .font(.system(.caption2, design: .rounded, weight: .bold))
+                                                .foregroundColor(.white.opacity(0.8))
+                                                .textCase(.uppercase)
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color.white.opacity(0.2))
+                                        )
+                                    }
+                                }
+                            }
+                            .padding(24)
+                            .padding(.top, 20)
                         }
                     }
-                    .padding(.horizontal)
                     
-                    Divider()
-                        .padding(.horizontal)
-                    
-                    // Article Content
-                    VStack(alignment: .leading, spacing: 16) {
+                    // Content area with card design
+                    VStack(alignment: .leading, spacing: 24) {
                         Text(viewModel.formattedContent)
-                            .font(.body)
-                            .lineSpacing(6)
+                            .font(.system(.body, design: .default))
+                            .lineSpacing(8)
+                            .foregroundColor(.primary)
                             .textSelection(.enabled)
                             .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                             .accessibilityLabel("Article content")
+                            .padding(.horizontal, 20)
+                        
+                        Spacer(minLength: 50)
                     }
-                    .padding(.horizontal)
-                    
-                    Spacer(minLength: 100) // Extra space at bottom
+                    .padding(.top, 24)
+                    .background {
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(.regularMaterial)
+                            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: -5)
+                    }
+                    .padding(.top, -20)
                 }
             }
+        }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !networkMonitor.isConnected {
                         Image(systemName: "wifi.slash")
                             .foregroundColor(.red)
-                            .font(.caption)
+                            .font(.title3)
+                            .symbolEffect(.pulse)
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
-                        // Read/Unread toggle
+                    HStack(spacing: 12) {
+                        // Read/Unread toggle with enhanced styling
                         Button(action: viewModel.toggleReadState) {
                             Image(systemName: viewModel.readStateIcon)
-                                .foregroundColor(viewModel.article.isRead ? .green : .gray)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(viewModel.article.isRead ? .green : .blue)
+                                .symbolEffect(.bounce, value: viewModel.article.isRead)
                         }
                         .accessibilityLabel(viewModel.readStateText)
                         .accessibilityHint("Toggle read status of this article")
                         
-                        // Share button
+                        // Share button with enhanced styling
                         ShareLink(item: viewModel.article.url ?? URL(string: "https://example.com")!) {
                             Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.purple)
                         }
                         .accessibilityLabel("Share article")
                         .accessibilityHint("Share this article with others")
                         
-                        // Open in browser button
+                        // Open in browser button with enhanced styling
                         if viewModel.hasURL {
                             Button(action: viewModel.openInBrowser) {
                                 Image(systemName: "safari")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.orange)
                             }
                             .accessibilityLabel("Open in Safari")
                             .accessibilityHint("Open the original article in Safari")
                         }
                     }
+                }
             }
-        }
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-            Button("OK") {
-                viewModel.clearError()
-            }
-        } message: {
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
+            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button("OK") {
+                    viewModel.clearError()
+                }
+            } message: {
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                }
             }
         }
     }
-}
 
 
 #Preview {
