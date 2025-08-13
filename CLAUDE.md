@@ -65,10 +65,7 @@ xcodebuild -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platfor
 # Clean build
 xcodebuild -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' clean build
 
-# Run all tests (recommended - includes parallel testing disabled flag for Core Data stability)
-xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -parallel-testing-enabled NO
-
-# Run all unit tests only (without UI tests)
+# Run all tests (unit tests only - UI tests have been removed)
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests -parallel-testing-enabled NO
 
 # Run specific test class
@@ -80,12 +77,12 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 
 ### Testing Strategy
 
-- **All Tests**: Use Swift Testing framework (@Test attributes) - no XCTest
+- **All Tests**: Use Swift Testing framework (@Test attributes) - **NO XCTest ALLOWED**
   - All tests use modern Swift Testing with `@Test` annotations and `#expect` assertions
   - Tests are structured as `struct` rather than `XCTestCase` classes
   - Parallel testing is disabled (`-parallel-testing-enabled NO`) for Core Data stability
 - **Unit Tests**: Located in `RSSium/RSSiumTests/`
-- **UI Tests**: Located in `RSSium/RSSiumUITests/` - converted to Swift Testing
+- **UI Tests**: **REMOVED** - Swift Testing does not support UI tests, only unit tests remain
 - **Service Layer**: Comprehensive test coverage for `PersistenceService` and `RSSService`
 - **ViewModel Layer**: Tests for all ViewModels with proper dependency injection
   - All ViewModels require proper service dependencies (persistenceService, rssService, refreshService, networkMonitor)
@@ -145,9 +142,6 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/RSSLocalIntegrationTests -parallel-testing-enabled NO
 
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/EndToEndIntegrationTests -parallel-testing-enabled NO
-
-# Run UI tests (Swift Testing framework)
-xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumUITests -parallel-testing-enabled NO
 ```
 
 ### UI Layer Architecture
@@ -227,13 +221,15 @@ Track detailed progress in `.kiro/specs/ios-rss-reader/tasks.md`. The applicatio
 - [x] Full SwiftUI interface (Feed List, Article List, Article Detail)
 - [x] Network monitoring and offline support
 - [x] Auto-sync on network restoration
-- [x] Swift Testing framework migration (unit tests converted from XCTest)
+- [x] Swift Testing framework migration (all tests converted from XCTest)
+- [x] UI tests removed (Swift Testing limitation)
 - [x] Comprehensive test coverage with proper dependency injection
 - [x] Accessibility support with VoiceOver and Dynamic Type
 
 Current phase:
 - [x] Performance optimization and final polish
 - [x] Test framework modernization completed
+- [x] UI test removal due to Swift Testing constraints
 
 ### Important Testing Notes
 
@@ -243,6 +239,8 @@ Current phase:
 
 **Test Isolation**: Each test creates its own in-memory Core Data stack to ensure complete isolation and prevent cross-test contamination.
 
+**CRITICAL**: Never use XCTest framework - project exclusively uses Swift Testing framework with @Test annotations and #expect assertions. UI tests are not supported and have been removed.
+
 ## Key Technical Details
 
 - **iOS Deployment Target**: 18.5
@@ -250,7 +248,7 @@ Current phase:
 - **UI Framework**: SwiftUI (no UIKit)
 - **Data Persistence**: Core Data with background context support
 - **Network**: URLSession with 30s request timeout, 60s resource timeout
-- **Testing**: Swift Testing framework (@Test) for all tests - no XCTest
+- **Testing**: Swift Testing framework (@Test) for all tests - **XCTest framework is forbidden**
 - **No external dependencies**: Pure Apple frameworks only
 
 ## Service Layer Usage Patterns

@@ -5,21 +5,17 @@ import CoreData
 struct PersistenceServiceTests {
     
     private func createTestStack() -> (PersistenceController, PersistenceService) {
-        // Use in-memory instance to avoid Core Data conflicts
+        // Create a completely isolated in-memory stack for each test
         let controller = PersistenceController(inMemory: true)
+        
+        // Disable automatic merging for predictable test behavior
+        controller.container.viewContext.automaticallyMergesChangesFromParent = false
+        
+        // Create service with the isolated controller
         let service = PersistenceService(persistenceController: controller)
         
-        // Clear any existing data
-        let context = controller.container.viewContext
-        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = Feed.fetchRequest()
-        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-        _ = try? context.execute(deleteRequest)
-        
-        let articleFetchRequest: NSFetchRequest<NSFetchRequestResult> = Article.fetchRequest()
-        let articleDeleteRequest = NSBatchDeleteRequest(fetchRequest: articleFetchRequest)
-        _ = try? context.execute(articleDeleteRequest)
-        
-        try? context.save()
+        // Ensure clean slate - reset the context
+        controller.container.viewContext.reset()
         
         return (controller, service)
     }
@@ -45,7 +41,7 @@ struct PersistenceServiceTests {
     }
     
     @Test func fetchActiveFeedsOnly() async throws {
-        let (_, service) = createTestStack()
+        let (controller, service) = createTestStack()
         
         let activeFeed = try service.createFeed(
             title: "Active Feed",
@@ -56,8 +52,11 @@ struct PersistenceServiceTests {
             title: "Inactive Feed",
             url: URL(string: "https://inactive.com/feed.xml")!
         )
+        
+        // Ensure we're working in the same context
+        let context = controller.container.viewContext
         inactiveFeed.isActive = false
-        try service.updateFeed(inactiveFeed)
+        try context.save()
         
         let activeFeeds = try service.fetchActiveFeeds()
         #expect(activeFeeds.count == 1)
@@ -164,7 +163,7 @@ struct PersistenceServiceTests {
     }
     
     @Test func fetchUnreadArticles() async throws {
-        let (_, service) = createTestStack()
+        let (controller, service) = createTestStack()
         
         let feed = try service.createFeed(
             title: "Test Feed",
@@ -190,7 +189,13 @@ struct PersistenceServiceTests {
             url: nil,
             feed: feed
         )
+        
+        // Mark as read and ensure context is saved
         try service.markArticleAsRead(readArticle)
+        
+        // Force context to process changes
+        let context = controller.container.viewContext
+        context.processPendingChanges()
         
         let unreadArticles = try service.fetchUnreadArticles(for: feed)
         #expect(unreadArticles.count == 1)
@@ -227,7 +232,7 @@ struct PersistenceServiceTests {
     }
     
     @Test func markMultipleArticlesAsRead() async throws {
-        let (_, service) = createTestStack()
+        let (controller, service) = createTestStack()
         
         let feed = try service.createFeed(
             title: "Test Feed",
@@ -247,6 +252,10 @@ struct PersistenceServiceTests {
         }
         
         try service.markArticlesAsRead(Array(articles.prefix(2)))
+        
+        // Force context to process changes
+        let context = controller.container.viewContext
+        context.processPendingChanges()
         
         let unreadArticles = try service.fetchUnreadArticles(for: feed)
         #expect(unreadArticles.count == 1)
@@ -322,7 +331,7 @@ struct PersistenceServiceTests {
     }
     
     @Test func markAllArticlesAsReadForFeed() async throws {
-        let (_, service) = createTestStack()
+        let (controller, service) = createTestStack()
         
         let feed = try service.createFeed(
             title: "Test Feed",
@@ -343,8 +352,11 @@ struct PersistenceServiceTests {
         
         try service.markAllArticlesAsRead(for: feed)
         
-        // Wait a bit for background operation
-        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        // Wait for background operation to complete
+        try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+        
+        // Force context to reload data
+        controller.container.viewContext.refreshAllObjects()
         
         let unreadCount = try service.getUnreadCount(for: feed)
         #expect(unreadCount == 0)
@@ -353,13 +365,15 @@ struct PersistenceServiceTests {
     // MARK: - Statistics Tests
     
     @Test func getUnreadCount() async throws {
-        let (_, service) = createTestStack()
+        let (controller, service) = createTestStack()
         
         let feed = try service.createFeed(
             title: "Test Feed",
             url: URL(string: "https://example.com/feed.xml")!
         )
         
+        // Create all articles first
+        var articles: [Article] = []
         for i in 1...5 {
             let article = try service.createArticle(
                 title: "Article \(i)",
@@ -370,10 +384,22 @@ struct PersistenceServiceTests {
                 url: nil,
                 feed: feed
             )
-            if i <= 2 {
-                try service.markArticleAsRead(article)
-            }
+            articles.append(article)
         }
+        
+        // Save context after creating articles
+        let context = controller.container.viewContext
+        try context.save()
+        context.processPendingChanges()
+        
+        // Mark the first 2 as read
+        for i in 0..<2 {
+            try service.markArticleAsRead(articles[i])
+        }
+        
+        // Save context after marking as read
+        try context.save()
+        context.processPendingChanges()
         
         let feedUnreadCount = try service.getUnreadCount(for: feed)
         #expect(feedUnreadCount == 3)

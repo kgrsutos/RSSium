@@ -49,8 +49,8 @@ class PersistenceService {
     
     func updateFeed(_ feed: Feed) throws {
         let context = persistenceController.container.viewContext
-        guard context.hasChanges else { return }
         try context.save()
+        context.refresh(feed, mergeChanges: true)
     }
     
     func deleteFeed(_ feed: Feed) throws {
@@ -132,14 +132,14 @@ class PersistenceService {
         let context = persistenceController.container.viewContext
         article.isRead = true
         try context.save()
-        context.refresh(article, mergeChanges: false)
+        context.refresh(article, mergeChanges: true)
     }
     
     func markArticlesAsRead(_ articles: [Article]) throws {
         let context = persistenceController.container.viewContext
         articles.forEach { $0.isRead = true }
         try context.save()
-        articles.forEach { context.refresh($0, mergeChanges: false) }
+        articles.forEach { context.refresh($0, mergeChanges: true) }
     }
     
     // MARK: - Offline Support
@@ -226,7 +226,7 @@ class PersistenceService {
         let articles = try context.fetch(request)
         articles.forEach { $0.isRead = true }
         try context.save()
-        articles.forEach { context.refresh($0, mergeChanges: false) }
+        articles.forEach { context.refresh($0, mergeChanges: true) }
     }
     
     // MARK: - Statistics

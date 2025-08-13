@@ -53,17 +53,11 @@ xcodebuild -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platfor
 ## Running Tests
 
 ### Important Note
-All tests use Swift Testing framework (@Test attributes) instead of XCTest. Due to Core Data context management in tests, it's recommended to disable parallel test execution to avoid potential race conditions.
+**All tests use Swift Testing framework (@Test attributes) exclusively - XCTest is not used.** UI tests have been removed due to Swift Testing framework limitations. Due to Core Data context management in tests, parallel test execution is disabled to avoid race conditions.
 
-### Run All Tests (Recommended)
+### Run All Tests (Unit Tests Only)
 ```bash
-# Run all tests with parallel execution disabled
-xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -parallel-testing-enabled NO
-```
-
-### Run All Unit Tests Only
-```bash
-# Run unit tests without UI tests
+# Run all unit tests (UI tests have been removed)
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests -parallel-testing-enabled NO
 ```
 
@@ -82,14 +76,8 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/FeedListViewModelTests/initialState -parallel-testing-enabled NO
 ```
 
-### Run UI Tests
-```bash
-# Run UI tests separately
-xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumUITests -parallel-testing-enabled NO
-```
-
 ### Test Categories
-All tests use Swift Testing framework (@Test attributes) with `#expect` assertions:
+All tests use **Swift Testing framework (@Test attributes) exclusively** with `#expect` assertions:
 
 - **Unit Tests** (`RSSiumTests/`): Test individual components in isolation
   - `FeedListViewModelTests`: Feed list management
@@ -103,9 +91,7 @@ All tests use Swift Testing framework (@Test attributes) with `#expect` assertio
 - **Integration Tests**: End-to-end workflow testing
   - `RSSLocalIntegrationTests`: Local RSS parsing integration
   - `EndToEndIntegrationTests`: Complete app flow testing
-- **UI Tests** (`RSSiumUITests/`): User interface testing (Swift Testing framework)
-  - `RSSiumUITests`: Main UI flows
-  - `AccessibilityTests`: Accessibility compliance
+- **UI Tests**: **REMOVED** - Swift Testing framework does not support UI tests
 
 ## Architecture
 
@@ -133,7 +119,7 @@ RSSium follows the MVVM pattern with a three-tier layered architecture:
 - **UI Framework**: SwiftUI
 - **Data Persistence**: Core Data
 - **Networking**: URLSession
-- **Testing**: Swift Testing framework (@Test attributes, #expect assertions)
+- **Testing**: Swift Testing framework (@Test attributes, #expect assertions) - **XCTest forbidden**
 - **Architecture**: MVVM
 - **Language**: Swift 5.0
 
@@ -146,6 +132,13 @@ RSSium/
 │   ├── Services/          # Data and network services
 │   ├── ViewModels/        # MVVM ViewModels
 │   └── Views/             # SwiftUI Views
-├── RSSiumTests/           # Unit tests
-└── RSSiumUITests/         # UI tests
+└── RSSiumTests/           # Unit tests (Swift Testing framework only)
 ```
+
+### Testing Framework Notes
+
+- **Swift Testing Only**: Project exclusively uses Swift Testing framework with `@Test` annotations
+- **No XCTest**: XCTest framework is not used anywhere in the project
+- **No UI Tests**: UI tests have been removed due to Swift Testing framework limitations
+- **Test Structure**: All tests are structured as `struct` rather than `XCTestCase` classes
+- **Assertions**: Uses `#expect` assertions instead of `XCTAssert` family

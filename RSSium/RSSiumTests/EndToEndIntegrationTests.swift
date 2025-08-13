@@ -3,13 +3,20 @@ import Foundation
 import CoreData
 @testable import RSSium
 
+@MainActor
 struct EndToEndIntegrationTests {
     
-    let persistenceService = PersistenceService(persistenceController: PersistenceController.test)
-    let rssService = RSSService.shared
+    private func createIsolatedTestStack() -> (PersistenceController, PersistenceService, RSSService) {
+        let controller = PersistenceController(inMemory: true)
+        let service = PersistenceService(persistenceController: controller)
+        let rssService = RSSService.shared
+        return (controller, service, rssService)
+    }
     
     @Test
     func fullFeedWorkflow() async throws {
+        let (_, persistenceService, rssService) = createIsolatedTestStack()
+        
         let feedURL = URL(string: "https://example.com/feed.xml")!
         let feed = try persistenceService.createFeed(title: "Test Feed", url: feedURL)
         
@@ -77,6 +84,8 @@ struct EndToEndIntegrationTests {
     
     @Test
     func batchOperationsIntegration() async throws {
+        let (_, persistenceService, _) = createIsolatedTestStack()
+        
         let feed1 = try persistenceService.createFeed(title: "Feed 1", url: URL(string: "https://example.com/1")!)
         let feed2 = try persistenceService.createFeed(title: "Feed 2", url: URL(string: "https://example.com/2")!)
         
@@ -121,6 +130,8 @@ struct EndToEndIntegrationTests {
     
     @Test
     func duplicateArticleHandling() async throws {
+        let (_, persistenceService, _) = createIsolatedTestStack()
+        
         let feed = try persistenceService.createFeed(title: "Test Feed", url: URL(string: "https://example.com/feed")!)
         
         let originalArticles = [
@@ -156,6 +167,8 @@ struct EndToEndIntegrationTests {
     
     @Test
     func feedUpdateWorkflow() async throws {
+        let (_, persistenceService, _) = createIsolatedTestStack()
+        
         let feedURL = URL(string: "https://example.com/news")!
         let feed = try persistenceService.createFeed(title: "News Feed", url: feedURL)
         

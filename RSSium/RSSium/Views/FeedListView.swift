@@ -76,9 +76,9 @@ struct FeedListView: View {
                 if viewModel.feeds.isEmpty && !viewModel.isLoading {
                     if networkMonitor.isConnected {
                         ContentUnavailableView(
-                            "No Feeds",
+                            "No Feeds Yet",
                             systemImage: "rss",
-                            description: Text("Add your first RSS feed to get started")
+                            description: Text("Tap the + button to add your first RSS feed")
                         )
                     } else {
                         ContentUnavailableView(

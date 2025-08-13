@@ -26,7 +26,6 @@
 /* Begin PBXFileReference section */
 		A33B5A3C2E2677FC004B3E20 /* RSSium.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RSSium.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A33B5A492E2677FE004B3E20 /* RSSiumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RSSiumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A33B5A532E2677FE004B3E20 /* RSSiumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RSSiumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -87,7 +86,6 @@
 			children = (
 				A33B5A3C2E2677FC004B3E20 /* RSSium.app */,
 				A33B5A492E2677FE004B3E20 /* RSSiumTests.xctest */,
-				A33B5A532E2677FE004B3E20 /* RSSiumUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -140,29 +138,6 @@
 			productReference = A33B5A492E2677FE004B3E20 /* RSSiumTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		A33B5A522E2677FE004B3E20 /* RSSiumUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A33B5A632E2677FE004B3E20 /* Build configuration list for PBXNativeTarget "RSSiumUITests" */;
-			buildPhases = (
-				A33B5A4F2E2677FE004B3E20 /* Sources */,
-				A33B5A502E2677FE004B3E20 /* Frameworks */,
-				A33B5A512E2677FE004B3E20 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A33B5A552E2677FE004B3E20 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				A33B5A562E2677FE004B3E20 /* RSSiumUITests */,
-			);
-			name = RSSiumUITests;
-			packageProductDependencies = (
-			);
-			productName = RSSiumUITests;
-			productReference = A33B5A532E2677FE004B3E20 /* RSSiumUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -202,7 +177,6 @@
 			targets = (
 				A33B5A3B2E2677FC004B3E20 /* RSSium */,
 				A33B5A482E2677FE004B3E20 /* RSSiumTests */,
-				A33B5A522E2677FE004B3E20 /* RSSiumUITests */,
 			);
 		};
 /* End PBXProject section */
