@@ -9,7 +9,18 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        FeedListView()
+        TabView {
+            FeedListView()
+                .tabItem {
+                    Label("Feeds", systemImage: "rss")
+                }
+            
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
+        }
+        .accentColor(.blue)
     }
 }
 

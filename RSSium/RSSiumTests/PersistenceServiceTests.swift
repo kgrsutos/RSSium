@@ -5,8 +5,22 @@ import CoreData
 struct PersistenceServiceTests {
     
     private func createTestStack() -> (PersistenceController, PersistenceService) {
+        // Use in-memory instance to avoid Core Data conflicts
         let controller = PersistenceController(inMemory: true)
         let service = PersistenceService(persistenceController: controller)
+        
+        // Clear any existing data
+        let context = controller.container.viewContext
+        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = Feed.fetchRequest()
+        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+        _ = try? context.execute(deleteRequest)
+        
+        let articleFetchRequest: NSFetchRequest<NSFetchRequestResult> = Article.fetchRequest()
+        let articleDeleteRequest = NSBatchDeleteRequest(fetchRequest: articleFetchRequest)
+        _ = try? context.execute(articleDeleteRequest)
+        
+        try? context.save()
+        
         return (controller, service)
     }
     

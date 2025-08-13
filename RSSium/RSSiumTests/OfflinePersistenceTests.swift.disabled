@@ -1,0 +1,210 @@
+import Testing
+import Foundation
+import CoreData
+@testable import RSSium
+
+struct OfflinePersistenceTests {
+    
+    let persistenceService = PersistenceService(persistenceController: PersistenceController(inMemory: true))
+    let rssService = RSSService.shared
+    
+    @Test
+    func persistFeedDataForOfflineAccess() async throws {
+        let feedURL = URL(string: "https://feeds.feedburner.com/TechCrunch")!
+        let feed = try persistenceService.createFeed(title: "TechCrunch", url: feedURL)
+        
+        let channel = try await rssService.fetchAndParseFeed(from: feedURL.absoluteString)
+        try await persistenceService.importArticles(from: channel.items, for: feed)
+        
+        let articles = try persistenceService.fetchArticles(for: feed)
+        #expect(!articles.isEmpty)
+        
+        for article in articles {
+            #expect(!article.title.isEmpty)
+            #expect(article.content != nil || article.summary != nil)
+            #expect(article.url != nil)
+        }
+    }
+    
+    @Test
+    func retrieveArticlesWhileOffline() async throws {
+        let feedURL = URL(string: "https://example.com/feed.xml")!
+        let feed = try persistenceService.createFeed(title: "Test Feed", url: feedURL)
+        
+        let testArticles = [
+            RSSItem(title: "Article 1", link: "https://example.com/1", description: "Content 1", pubDate: Date(), author: nil, guid: "1"),
+            RSSItem(title: "Article 2", link: "https://example.com/2", description: "Content 2", pubDate: Date(), author: nil, guid: "2"),
+            RSSItem(title: "Article 3", link: "https://example.com/3", description: "Content 3", pubDate: Date(), author: nil, guid: "3")
+        ]
+        
+        try await persistenceService.importArticles(from: testArticles, for: feed)
+        
+        let articles = try persistenceService.fetchArticles(for: feed)
+        #expect(articles.count == 3)
+        
+        let unreadCount = persistenceService.getUnreadCount(for: feed)
+        #expect(unreadCount == 3)
+    }
+    
+    @Test
+    func persistReadStateAcrossLaunches() async throws {
+        let feedURL = URL(string: "https://example.com/feed.xml")!
+        let feed = try persistenceService.createFeed(title: "Test Feed", url: feedURL)
+        
+        let testArticle = RSSItem(title: "Test Article", description: "Content", link: "https://example.com/1", pubDate: Date())
+        
+        try await persistenceService.importArticles(from: [testArticle], for: feed)
+        
+        let articles = try persistenceService.fetchArticles(for: feed)
+        guard let article = articles.first else {
+            #expect(Bool(false), "No article found")
+            return
+        }
+        
+        #expect(!article.isRead)
+        
+        try persistenceService.markArticleAsRead(article)
+        
+        let updatedArticles = try persistenceService.fetchArticles(for: feed)
+        guard let updatedArticle = updatedArticles.first else {
+            #expect(Bool(false), "No article found")
+            return
+        }
+        
+        #expect(updatedArticle.isRead)
+    }
+    
+    @Test
+    func batchUpdateArticlesInBackground() async throws {
+        let feedURL = URL(string: "https://example.com/feed.xml")!
+        let feed = try persistenceService.createFeed(title: "Test Feed", url: feedURL)
+        
+        let testArticles = (1...100).map { index in
+            RSSItem(
+                title: "Article \(index)",
+                description: "Content \(index)",
+                link: "https://example.com/\(index)",
+                pubDate: Date().addingTimeInterval(TimeInterval(-index * 3600))
+            )
+        }
+        
+        try await persistenceService.importArticles(from: testArticles, for: feed)
+        
+        let articles = try persistenceService.fetchArticles(for: feed)
+        #expect(articles.count == 100)
+        
+        try await persistenceService.performBackgroundTask { context in
+            let request = Article.fetchRequest()
+            request.predicate = NSPredicate(format: "feed == %@", feed)
+            request.fetchLimit = 50
+            
+            let articlesToUpdate = try context.fetch(request)
+            for article in articlesToUpdate {
+                article.isRead = true
+            }
+            
+            try context.save()
+        }
+        
+        let unreadCount = persistenceService.getUnreadCount(for: feed)
+        #expect(unreadCount == 50)
+    }
+    
+    @Test
+    func handleLargeOfflineDataset() async throws {
+        let feedCount = 10
+        let articlesPerFeed = 50
+        
+        var feeds: [Feed] = []
+        for i in 1...feedCount {
+            let feed = try persistenceService.createFeed(
+                title: "Feed \(i)",
+                url: URL(string: "https://example.com/feed\(i).xml")!
+            )
+            feeds.append(feed)
+        }
+        
+        for (index, feed) in feeds.enumerated() {
+            let articles = (1...articlesPerFeed).map { articleIndex in
+                RSSItem(
+                    title: "Feed \(index + 1) - Article \(articleIndex)",
+                    description: "Content for article \(articleIndex) in feed \(index + 1)",
+                    link: "https://example.com/feed\(index + 1)/article\(articleIndex)",
+                    pubDate: Date().addingTimeInterval(TimeInterval(-articleIndex * 3600))
+                )
+            }
+            
+            try await persistenceService.importArticles(from: articles, for: feed)
+        }
+        
+        let totalArticleCount = persistenceService.getTotalArticleCount()
+        #expect(totalArticleCount == feedCount * articlesPerFeed)
+        
+        let allFeeds = try persistenceService.fetchAllFeeds()
+        #expect(allFeeds.count == feedCount)
+        
+        for feed in allFeeds {
+            let unreadCount = persistenceService.getUnreadCount(for: feed)
+            #expect(unreadCount == articlesPerFeed)
+        }
+    }
+    
+    @Test
+    func syncDataWhenConnectivityRestored() async throws {
+        let feedURL = URL(string: "https://feeds.feedburner.com/TechCrunch")!
+        let feed = try persistenceService.createFeed(title: "TechCrunch", url: feedURL)
+        
+        let initialArticles = [
+            RSSItem(title: "Offline Article 1", description: "Content 1", link: "https://example.com/1", pubDate: Date()),
+            RSSItem(title: "Offline Article 2", description: "Content 2", link: "https://example.com/2", pubDate: Date())
+        ]
+        
+        try await persistenceService.importArticles(from: initialArticles, for: feed)
+        
+        let offlineArticleCount = try persistenceService.fetchArticles(for: feed).count
+        #expect(offlineArticleCount == 2)
+        
+        let channel = try await rssService.fetchAndParseFeed(from: feedURL.absoluteString)
+        try await persistenceService.importArticles(from: channel.items, for: feed)
+        
+        let syncedArticleCount = try persistenceService.fetchArticles(for: feed).count
+        #expect(syncedArticleCount > offlineArticleCount)
+        
+        try persistenceService.updateFeedLastUpdated(feed)
+        
+        let updatedFeed = try persistenceService.fetchAllFeeds().first { $0.id == feed.id }
+        #expect(updatedFeed?.lastUpdated != nil)
+    }
+    
+    @Test
+    func maintainDataIntegrityDuringCrash() async throws {
+        let feedURL = URL(string: "https://example.com/feed.xml")!
+        let feed = try persistenceService.createFeed(title: "Test Feed", url: feedURL)
+        
+        try await persistenceService.performBackgroundTask { context in
+            for i in 1...10 {
+                let article = Article(context: context)
+                article.id = UUID()
+                article.title = "Article \(i)"
+                article.content = "Content \(i)"
+                article.url = URL(string: "https://example.com/\(i)")
+                article.publishedDate = Date()
+                article.isRead = false
+                article.feed = try context.existingObject(with: feed.objectID) as? Feed
+                
+                if i == 5 {
+                    try context.save()
+                }
+            }
+            
+            try context.save()
+        }
+        
+        let articles = try persistenceService.fetchArticles(for: feed)
+        #expect(articles.count == 10)
+        
+        for (index, article) in articles.enumerated() {
+            #expect(article.title == "Article \(index + 1)")
+        }
+    }
+}

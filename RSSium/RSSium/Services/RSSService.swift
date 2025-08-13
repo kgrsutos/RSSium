@@ -6,16 +6,25 @@ enum RSSError: LocalizedError, Equatable {
     case invalidFeedFormat
     case networkError(Error)
     case parsingError(String)
+    case connectionTimeout
+    case serverError(Int)
+    case emptyResponse
+    case unsupportedEncoding
     
     static func == (lhs: RSSError, rhs: RSSError) -> Bool {
         switch (lhs, rhs) {
         case (.invalidURL, .invalidURL),
-             (.invalidFeedFormat, .invalidFeedFormat):
+             (.invalidFeedFormat, .invalidFeedFormat),
+             (.connectionTimeout, .connectionTimeout),
+             (.emptyResponse, .emptyResponse),
+             (.unsupportedEncoding, .unsupportedEncoding):
             return true
         case (.networkError(let lhsError), .networkError(let rhsError)):
             return (lhsError as NSError) == (rhsError as NSError)
         case (.parsingError(let lhsMessage), .parsingError(let rhsMessage)):
             return lhsMessage == rhsMessage
+        case (.serverError(let lhsCode), .serverError(let rhsCode)):
+            return lhsCode == rhsCode
         default:
             return false
         }
@@ -24,13 +33,81 @@ enum RSSError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "The provided URL is invalid"
+            return "Please check the URL and try again"
         case .invalidFeedFormat:
-            return "The feed format is not supported"
+            return "This RSS feed format is not supported"
         case .networkError(let error):
+            if let urlError = error as? URLError {
+                switch urlError.code {
+                case .notConnectedToInternet:
+                    return "No internet connection available"
+                case .timedOut:
+                    return "Request timed out. Check your connection and try again"
+                case .cannotFindHost:
+                    return "Cannot reach the server. Check the URL"
+                case .cannotConnectToHost:
+                    return "Cannot connect to the server"
+                case .badURL:
+                    return "Invalid URL format"
+                case .cancelled:
+                    return "Request was cancelled"
+                default:
+                    return "Network error: \(error.localizedDescription)"
+                }
+            }
             return "Network error: \(error.localizedDescription)"
         case .parsingError(let message):
-            return "Parsing error: \(message)"
+            return "Could not read RSS feed: \(message)"
+        case .connectionTimeout:
+            return "Connection timed out. Check your internet and try again"
+        case .serverError(let code):
+            switch code {
+            case 404:
+                return "RSS feed not found (404). Check the URL"
+            case 403:
+                return "Access denied to RSS feed (403)"
+            case 500...599:
+                return "Server error (\(code)). Try again later"
+            default:
+                return "Server returned error (\(code))"
+            }
+        case .emptyResponse:
+            return "RSS feed is empty or invalid"
+        case .unsupportedEncoding:
+            return "RSS feed encoding is not supported"
+        }
+    }
+    
+    var recoverySuggestion: String? {
+        switch self {
+        case .invalidURL:
+            return "Verify the URL starts with http:// or https://"
+        case .invalidFeedFormat:
+            return "Try a different RSS feed URL"
+        case .networkError(let error):
+            if let urlError = error as? URLError {
+                switch urlError.code {
+                case .notConnectedToInternet:
+                    return "Connect to WiFi or cellular data"
+                case .timedOut, .cannotConnectToHost:
+                    return "Check your internet connection and try again"
+                case .cannotFindHost:
+                    return "Verify the URL is correct"
+                default:
+                    return "Check your internet connection"
+                }
+            }
+            return "Check your internet connection"
+        case .connectionTimeout:
+            return "Try again with a stable internet connection"
+        case .serverError:
+            return "Wait a moment and try again"
+        case .emptyResponse:
+            return "Verify this is a valid RSS feed URL"
+        case .unsupportedEncoding:
+            return "Contact the feed provider about encoding issues"
+        default:
+            return nil
         }
     }
 }
@@ -72,14 +149,41 @@ class RSSService: NSObject {
         do {
             let (data, response) = try await session.data(from: url)
             
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
+            guard let httpResponse = response as? HTTPURLResponse else {
                 throw RSSError.networkError(URLError(.badServerResponse))
+            }
+            
+            // Handle HTTP status codes
+            switch httpResponse.statusCode {
+            case 200...299:
+                break // Success
+            case 400...499:
+                throw RSSError.serverError(httpResponse.statusCode)
+            case 500...599:
+                throw RSSError.serverError(httpResponse.statusCode)
+            default:
+                throw RSSError.serverError(httpResponse.statusCode)
+            }
+            
+            // Check for empty response
+            guard !data.isEmpty else {
+                throw RSSError.emptyResponse
             }
             
             return try await parseFeedData(data)
         } catch let error as RSSError {
             throw error
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .timedOut:
+                throw RSSError.connectionTimeout
+            case .notConnectedToInternet:
+                throw RSSError.networkError(urlError)
+            case .cannotFindHost, .cannotConnectToHost:
+                throw RSSError.networkError(urlError)
+            default:
+                throw RSSError.networkError(urlError)
+            }
         } catch {
             throw RSSError.networkError(error)
         }

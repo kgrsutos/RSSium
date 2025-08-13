@@ -8,16 +8,42 @@ class FeedListViewModel: ObservableObject {
     @Published var unreadCounts: [UUID: Int] = [:]
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var errorRecoverySuggestion: String?
+    @Published var shouldShowRetryOption = false
     @Published var showingAddFeed = false
+    @Published var refreshProgress: Double = 0.0
+    @Published var lastRefreshDate: Date?
+    @Published var feedRefreshErrors: [UUID: String] = [:]
     
     private let persistenceService: PersistenceService
     private let rssService: RSSService
+    private let refreshService: RefreshService
+    private let networkMonitor: NetworkMonitor
     private var cancellables = Set<AnyCancellable>()
     
-    init(persistenceService: PersistenceService = PersistenceService(), rssService: RSSService = .shared) {
+    // Retry state
+    private var lastFailedAction: (() async -> Void)?
+    private var lastFailedFeedURL: String?
+    
+    init(
+        persistenceService: PersistenceService = PersistenceService(),
+        rssService: RSSService = .shared,
+        refreshService: RefreshService = .shared,
+        networkMonitor: NetworkMonitor = .shared,
+        autoLoadFeeds: Bool = true
+    ) {
         self.persistenceService = persistenceService
         self.rssService = rssService
-        loadFeeds()
+        self.refreshService = refreshService
+        self.networkMonitor = networkMonitor
+        
+        // Load feeds asynchronously to improve launch time
+        if autoLoadFeeds {
+            Task { @MainActor in
+                await loadFeedsAsync()
+            }
+        }
+        setupRefreshServiceBinding()
     }
     
     func loadFeeds() {
@@ -26,6 +52,27 @@ class FeedListViewModel: ObservableObject {
             updateUnreadCounts()
         } catch {
             errorMessage = "Failed to load feeds: \(error.localizedDescription)"
+        }
+    }
+    
+    func loadFeedsAsync() async {
+        isLoading = true
+        do {
+            // Load feeds in background to avoid blocking UI
+            let loadedFeeds = try await Task.detached(priority: .userInitiated) {
+                try self.persistenceService.fetchActiveFeeds()
+            }.value
+            
+            await MainActor.run {
+                self.feeds = loadedFeeds
+                self.updateUnreadCounts()
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load feeds: \(error.localizedDescription)"
+                self.isLoading = false
+            }
         }
     }
     
@@ -70,9 +117,17 @@ class FeedListViewModel: ObservableObject {
             showingAddFeed = false
             
         } catch let error as RSSError {
-            errorMessage = error.localizedDescription
+            handleError(error)
+            lastFailedAction = { [weak self] in
+                await self?.addFeed(url: url, title: title)
+            }
+            lastFailedFeedURL = url
         } catch {
-            errorMessage = "Failed to add feed: \(error.localizedDescription)"
+            handleGenericError(error, context: "adding feed")
+            lastFailedAction = { [weak self] in
+                await self?.addFeed(url: url, title: title)
+            }
+            lastFailedFeedURL = url
         }
         
         isLoading = false
@@ -98,44 +153,62 @@ class FeedListViewModel: ObservableObject {
     }
     
     func refreshFeed(_ feed: Feed) async {
-        guard let urlString = feed.url?.absoluteString else {
-            errorMessage = "Invalid feed URL"
+        guard networkMonitor.isConnected else {
+            if let feedId = feed.id {
+                feedRefreshErrors[feedId] = "No network connection"
+            }
             return
         }
         
-        do {
-            let channel = try await rssService.fetchAndParseFeed(from: urlString)
-            
-            let parsedArticles = channel.items.map { item in
-                (
-                    title: item.title,
-                    content: item.description,
-                    summary: item.description,
-                    author: item.author,
-                    publishedDate: item.pubDate ?? Date(),
-                    url: item.link.flatMap { URL(string: $0) }
-                )
+        let result = await refreshService.refreshFeed(feed)
+        
+        if let feedId = feed.id {
+            if result.isSuccess {
+                feedRefreshErrors.removeValue(forKey: feedId)
+            } else if let error = result.error {
+                feedRefreshErrors[feedId] = error.localizedDescription
             }
-            
-            try await persistenceService.importArticles(from: parsedArticles, for: feed)
-            loadFeeds()
-            
-        } catch let error as RSSError {
-            errorMessage = "Failed to refresh feed: \(error.localizedDescription)"
-        } catch {
-            errorMessage = "Failed to refresh feed: \(error.localizedDescription)"
         }
+        
+        loadFeeds()
     }
     
     func refreshAllFeeds() async {
+        guard networkMonitor.isConnected else {
+            errorMessage = "No network connection available"
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
+        feedRefreshErrors.removeAll()
         
-        await withTaskGroup(of: Void.self) { group in
-            for feed in feeds {
-                group.addTask {
-                    await self.refreshFeed(feed)
+        do {
+            let result = try await refreshService.refreshAllFeeds()
+            
+            // Update individual feed errors
+            for feedResult in result.feedResults {
+                if let feedId = feedResult.feed.id {
+                    if !feedResult.isSuccess, let error = feedResult.error {
+                        feedRefreshErrors[feedId] = error.localizedDescription
+                    }
                 }
+            }
+            
+            // Set appropriate success/error message
+            if result.isCompleteSuccess {
+                errorMessage = nil
+            } else if result.isPartialSuccess {
+                errorMessage = "Some feeds failed to refresh (\(result.failedFeeds)/\(result.totalFeeds))"
+            }
+            
+            loadFeeds()
+            lastRefreshDate = Date()
+            
+        } catch {
+            handleGenericError(error, context: "refreshing all feeds")
+            lastFailedAction = { [weak self] in
+                await self?.refreshAllFeeds()
             }
         }
         
@@ -179,5 +252,64 @@ class FeedListViewModel: ObservableObject {
     
     func clearError() {
         errorMessage = nil
+        errorRecoverySuggestion = nil
+        shouldShowRetryOption = false
+        lastFailedAction = nil
+        lastFailedFeedURL = nil
+    }
+    
+    func retryLastAction() async {
+        guard let action = lastFailedAction else { return }
+        clearError()
+        await action()
+    }
+    
+    private func handleError(_ error: RSSError) {
+        errorMessage = error.localizedDescription
+        errorRecoverySuggestion = error.recoverySuggestion
+        shouldShowRetryOption = canRetryError(error)
+    }
+    
+    private func handleGenericError(_ error: Error, context: String) {
+        errorMessage = "Failed to \(context): \(error.localizedDescription)"
+        errorRecoverySuggestion = "Check your internet connection and try again"
+        shouldShowRetryOption = true
+    }
+    
+    private func canRetryError(_ error: RSSError) -> Bool {
+        switch error {
+        case .networkError, .connectionTimeout, .serverError:
+            return true
+        case .invalidURL, .invalidFeedFormat, .emptyResponse, .unsupportedEncoding:
+            return false
+        case .parsingError:
+            return false
+        }
+    }
+    
+    func hasRefreshError(for feed: Feed) -> Bool {
+        guard let feedId = feed.id else { return false }
+        return feedRefreshErrors[feedId] != nil
+    }
+    
+    func getRefreshError(for feed: Feed) -> String? {
+        guard let feedId = feed.id else { return nil }
+        return feedRefreshErrors[feedId]
+    }
+    
+    func canRefresh() -> Bool {
+        return refreshService.canRefresh()
+    }
+    
+    private func setupRefreshServiceBinding() {
+        refreshService.$refreshProgress
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.refreshProgress, on: self)
+            .store(in: &cancellables)
+        
+        refreshService.$lastRefreshDate
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.lastRefreshDate, on: self)
+            .store(in: &cancellables)
     }
 }

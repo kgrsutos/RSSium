@@ -121,6 +121,7 @@ class PersistenceService {
         article.publishedDate = publishedDate
         article.url = url
         article.isRead = false
+        article.isStoredOffline = false
         article.feed = feed
         
         try context.save()
@@ -131,12 +132,57 @@ class PersistenceService {
         let context = persistenceController.container.viewContext
         article.isRead = true
         try context.save()
+        context.refresh(article, mergeChanges: false)
     }
     
     func markArticlesAsRead(_ articles: [Article]) throws {
         let context = persistenceController.container.viewContext
         articles.forEach { $0.isRead = true }
         try context.save()
+        articles.forEach { context.refresh($0, mergeChanges: false) }
+    }
+    
+    // MARK: - Offline Support
+    
+    func markArticleForOfflineReading(_ article: Article) throws {
+        let context = persistenceController.container.viewContext
+        article.isStoredOffline = true
+        try context.save()
+    }
+    
+    func markArticlesForOfflineReading(_ articles: [Article]) throws {
+        let context = persistenceController.container.viewContext
+        articles.forEach { $0.isStoredOffline = true }
+        try context.save()
+    }
+    
+    func removeOfflineArticle(_ article: Article) throws {
+        let context = persistenceController.container.viewContext
+        article.isStoredOffline = false
+        try context.save()
+    }
+    
+    func fetchOfflineArticles() throws -> [Article] {
+        let context = persistenceController.container.viewContext
+        let request: NSFetchRequest<Article> = Article.fetchRequest()
+        request.predicate = NSPredicate(format: "isStoredOffline == YES")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Article.publishedDate, ascending: false)]
+        return try context.fetch(request)
+    }
+    
+    func fetchOfflineArticles(for feed: Feed) throws -> [Article] {
+        let context = persistenceController.container.viewContext
+        let request: NSFetchRequest<Article> = Article.fetchRequest()
+        request.predicate = NSPredicate(format: "feed == %@ AND isStoredOffline == YES", feed)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Article.publishedDate, ascending: false)]
+        return try context.fetch(request)
+    }
+    
+    func countOfflineArticles() throws -> Int {
+        let context = persistenceController.container.viewContext
+        let request: NSFetchRequest<Article> = Article.fetchRequest()
+        request.predicate = NSPredicate(format: "isStoredOffline == YES")
+        return try context.count(for: request)
     }
     
     func deleteArticle(_ article: Article) throws {
@@ -168,23 +214,19 @@ class PersistenceService {
     }
     
     func markAllArticlesAsRead(for feed: Feed? = nil) throws {
-        persistenceController.performBackgroundTask { context in
-            let request: NSFetchRequest<Article> = Article.fetchRequest()
-            
-            if let feed = feed {
-                request.predicate = NSPredicate(format: "feed == %@ AND isRead == NO", feed)
-            } else {
-                request.predicate = NSPredicate(format: "isRead == NO")
-            }
-            
-            do {
-                let articles = try context.fetch(request)
-                articles.forEach { $0.isRead = true }
-                try context.save()
-            } catch {
-                print("Error marking articles as read: \(error)")
-            }
+        let context = persistenceController.container.viewContext
+        let request: NSFetchRequest<Article> = Article.fetchRequest()
+        
+        if let feed = feed {
+            request.predicate = NSPredicate(format: "feed == %@ AND isRead == NO", feed)
+        } else {
+            request.predicate = NSPredicate(format: "isRead == NO")
         }
+        
+        let articles = try context.fetch(request)
+        articles.forEach { $0.isRead = true }
+        try context.save()
+        articles.forEach { context.refresh($0, mergeChanges: false) }
     }
     
     // MARK: - Statistics

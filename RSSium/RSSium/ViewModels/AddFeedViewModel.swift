@@ -12,9 +12,11 @@ class AddFeedViewModel: ObservableObject {
     @Published var previewTitle = ""
     
     private let rssService: RSSService
+    private let networkMonitor: NetworkMonitor
     
-    init(rssService: RSSService = .shared) {
+    init(rssService: RSSService = .shared, networkMonitor: NetworkMonitor = .shared) {
         self.rssService = rssService
+        self.networkMonitor = networkMonitor
     }
     
     var isURLValid: Bool {
@@ -26,13 +28,20 @@ class AddFeedViewModel: ObservableObject {
     }
     
     var canSubmit: Bool {
-        isURLValid && !finalTitle.isEmpty && !isValidating
+        isURLValid && !finalTitle.isEmpty && !isValidating && networkMonitor.isConnected
     }
     
     func validateFeed() async {
         guard isURLValid else {
             isValid = false
             validationMessage = "Please enter a valid URL"
+            previewTitle = ""
+            return
+        }
+        
+        guard networkMonitor.isConnected else {
+            isValid = false
+            validationMessage = "Network connection is required to validate feeds"
             previewTitle = ""
             return
         }
@@ -52,7 +61,7 @@ class AddFeedViewModel: ObservableObject {
             await MainActor.run {
                 self.isValid = false
                 self.previewTitle = ""
-                self.validationMessage = error.localizedDescription
+                self.validationMessage = self.formatErrorMessage(error)
             }
         } catch {
             await MainActor.run {
@@ -73,5 +82,28 @@ class AddFeedViewModel: ObservableObject {
         isValid = false
         validationMessage = ""
         previewTitle = ""
+    }
+    
+    private func formatErrorMessage(_ error: RSSError) -> String {
+        switch error {
+        case .networkError(let underlyingError):
+            if let urlError = underlyingError as? URLError {
+                switch urlError.code {
+                case .notConnectedToInternet:
+                    return "No internet connection"
+                case .timedOut:
+                    return "Request timed out"
+                case .cannotFindHost:
+                    return "Cannot find server"
+                case .cannotConnectToHost:
+                    return "Cannot connect to server"
+                default:
+                    return error.localizedDescription
+                }
+            }
+            return error.localizedDescription
+        default:
+            return error.localizedDescription
+        }
     }
 }
