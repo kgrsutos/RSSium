@@ -14,13 +14,6 @@
 			remoteGlobalIDString = A33B5A3B2E2677FC004B3E20;
 			remoteInfo = RSSium;
 		};
-		A33B5A542E2677FE004B3E20 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A33B5A342E2677FC004B3E20 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A33B5A3B2E2677FC004B3E20;
-			remoteInfo = RSSium;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -55,13 +48,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A33B5A462E2677FE004B3E20 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A33B5A502E2677FE004B3E20 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -155,10 +141,6 @@
 						CreatedOnToolsVersion = 16.4;
 						TestTargetID = A33B5A3B2E2677FC004B3E20;
 					};
-					A33B5A522E2677FE004B3E20 = {
-						CreatedOnToolsVersion = 16.4;
-						TestTargetID = A33B5A3B2E2677FC004B3E20;
-					};
 				};
 			};
 			buildConfigurationList = A33B5A372E2677FC004B3E20 /* Build configuration list for PBXProject "RSSium" */;
@@ -196,13 +178,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A33B5A512E2677FE004B3E20 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -220,13 +195,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A33B5A4F2E2677FE004B3E20 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -234,11 +202,6 @@
 			isa = PBXTargetDependency;
 			target = A33B5A3B2E2677FC004B3E20 /* RSSium */;
 			targetProxy = A33B5A4A2E2677FE004B3E20 /* PBXContainerItemProxy */;
-		};
-		A33B5A552E2677FE004B3E20 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A33B5A3B2E2677FC004B3E20 /* RSSium */;
-			targetProxy = A33B5A542E2677FE004B3E20 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -454,38 +417,6 @@
 			};
 			name = Release;
 		};
-		A33B5A642E2677FE004B3E20 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kgrsutos.RSSiumUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = RSSium;
-			};
-			name = Debug;
-		};
-		A33B5A652E2677FE004B3E20 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kgrsutos.RSSiumUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = RSSium;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -512,15 +443,6 @@
 			buildConfigurations = (
 				A33B5A612E2677FE004B3E20 /* Debug */,
 				A33B5A622E2677FE004B3E20 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		A33B5A632E2677FE004B3E20 /* Build configuration list for PBXNativeTarget "RSSiumUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A33B5A642E2677FE004B3E20 /* Debug */,
-				A33B5A652E2677FE004B3E20 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
