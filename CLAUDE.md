@@ -29,6 +29,10 @@ The data layer is fully implemented with a service-oriented architecture:
 - **RSSService**: RSS/Atom feed parsing with comprehensive format support (RSS 2.0, Atom 1.0)
 - **RefreshService**: Centralized feed refresh management with auto-sync on network restoration
 - **NetworkMonitor**: Network connectivity monitoring using NWPathMonitor
+- **ImageCacheService**: Feed icon caching with memory and disk cache management
+- **BackgroundRefreshScheduler**: iOS background refresh task scheduling and execution
+- **PerformanceOptimizer**: App-wide performance optimization settings and configurations
+- **MemoryMonitor**: Real-time memory usage monitoring with pressure notifications
 
 The `PersistenceService` abstracts Core Data complexity and provides clean async APIs for:
 - CRUD operations for Feed and Article entities
@@ -51,6 +55,15 @@ The `RSSService` supports:
 - Comprehensive error handling with typed errors
 - URL validation and network timeout configuration
 - Async/await interface with background parsing
+
+### Performance & Optimization Services
+
+The app includes comprehensive performance monitoring and optimization:
+
+- **ImageCacheService**: Dual-level caching (memory + disk) for feed icons with automatic cleanup
+- **MemoryMonitor**: Real-time memory pressure monitoring with automatic cache cleanup triggers
+- **PerformanceOptimizer**: Centralized performance settings with user-configurable options
+- **BackgroundRefreshScheduler**: iOS Background App Refresh integration for automatic feed updates
 
 ## Development Commands
 
@@ -286,9 +299,10 @@ Standard Xcode iOS app organization:
 - Source files: `RSSium/RSSium/`
 - Project file: `RSSium/RSSium.xcodeproj`
 - Models: Core Data entities (Feed, Article) with extensions
-- Services: PersistenceService, RSSService, RefreshService, NetworkMonitor
+- Services: PersistenceService, RSSService, RefreshService, NetworkMonitor, ImageCacheService, BackgroundRefreshScheduler, PerformanceOptimizer, MemoryMonitor
 - ViewModels: FeedListViewModel, AddFeedViewModel, ArticleListViewModel, ArticleDetailViewModel
-- Views: FeedListView, AddFeedView, ArticleListView, ArticleDetailView, SettingsView
+- Views: FeedListView, AddFeedView, ArticleListView, ArticleDetailView, SettingsView, SplashView
+- Extensions: Color+RSSium for app-wide theming
 
 ### Important Implementation Notes
 

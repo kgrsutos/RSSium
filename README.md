@@ -5,12 +5,15 @@ RSSium is a SwiftUI-based RSS reader application for iOS 18.5+. Built with moder
 ## Features
 
 - RSS 2.0 and Atom 1.0 feed support
-- Offline reading capabilities
-- Automatic feed refresh
-- Unread article management
-- Network connectivity monitoring
+- Offline reading capabilities with Core Data persistence
+- Automatic feed refresh with background scheduling
+- Unread article management with batch operations
+- Network connectivity monitoring with auto-sync
+- Feed icon caching with memory and disk optimization
+- Real-time memory monitoring and performance optimization
 - Accessibility support with VoiceOver and Dynamic Type
 - Pull-to-refresh and swipe actions
+- Background App Refresh integration
 
 ## Requirements
 
@@ -109,10 +112,23 @@ RSSium follows the MVVM pattern with a three-tier layered architecture:
 
 ### Key Components
 
-- **Views**: SwiftUI-based user interface
-- **ViewModels**: Presentation logic and data binding
-- **Services**: Data persistence, RSS parsing, network monitoring
-- **Models**: Core Data entities (Feed, Article)
+- **Views**: SwiftUI-based user interface with accessibility support
+- **ViewModels**: Presentation logic and reactive data binding
+- **Services**: Data persistence, RSS parsing, network monitoring, caching, and performance optimization
+- **Models**: Core Data entities (Feed, Article) with relationship management
+
+### Service Layer
+
+The app includes comprehensive service architecture for performance and reliability:
+
+- **PersistenceService**: Core Data operations with background context handling
+- **RSSService**: RSS/Atom feed parsing with comprehensive format support
+- **RefreshService**: Centralized feed refresh management
+- **NetworkMonitor**: Network connectivity monitoring with auto-sync
+- **ImageCacheService**: Dual-level caching for feed icons
+- **BackgroundRefreshScheduler**: iOS Background App Refresh integration
+- **PerformanceOptimizer**: App-wide performance settings
+- **MemoryMonitor**: Real-time memory pressure monitoring
 
 ## Technology Stack
 
@@ -128,10 +144,11 @@ RSSium follows the MVVM pattern with a three-tier layered architecture:
 ```
 RSSium/
 ├── RSSium/                # Main application
-│   ├── Models/            # Core Data models
-│   ├── Services/          # Data and network services
-│   ├── ViewModels/        # MVVM ViewModels
-│   └── Views/             # SwiftUI Views
+│   ├── Models/            # Core Data models and extensions
+│   ├── Services/          # Data persistence, networking, caching, and optimization
+│   ├── ViewModels/        # MVVM ViewModels with dependency injection
+│   ├── Views/             # SwiftUI Views with accessibility
+│   └── Extensions/        # Shared extensions and theming
 └── RSSiumTests/           # Unit tests (Swift Testing framework only)
 ```
 
