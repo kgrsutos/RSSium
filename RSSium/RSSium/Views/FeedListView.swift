@@ -1,17 +1,24 @@
 import SwiftUI
 
 struct FeedListView: View {
-    @StateObject private var viewModel = FeedListViewModel(
-        persistenceService: PersistenceService(),
-        rssService: .shared,
-        refreshService: .shared,
-        networkMonitor: .shared
-    )
+    private let persistenceService: PersistenceService
+    @StateObject private var viewModel: FeedListViewModel
     @StateObject private var networkMonitor = NetworkMonitor.shared
+    
+    init() {
+        let service = PersistenceService()
+        self.persistenceService = service
+        self._viewModel = StateObject(wrappedValue: FeedListViewModel(
+            persistenceService: service,
+            rssService: .shared,
+            refreshService: .shared,
+            networkMonitor: .shared
+        ))
+    }
     
     var body: some View {
         NavigationStack {
-            FeedListContentView(viewModel: viewModel, networkMonitor: networkMonitor)
+            FeedListContentView(viewModel: viewModel, networkMonitor: networkMonitor, persistenceService: persistenceService)
                 .navigationTitle("RSS Feeds")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {

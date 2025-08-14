@@ -7,12 +7,11 @@ struct ArticleListView: View {
     @Environment(\.dismiss) private var dismiss
     private let persistenceService: PersistenceService
     
-    init(feed: Feed) {
-        let service = PersistenceService()
-        self.persistenceService = service
+    init(feed: Feed, persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
         self._viewModel = StateObject(wrappedValue: ArticleListViewModel(
             feed: feed,
-            persistenceService: service,
+            persistenceService: persistenceService,
             rssService: .shared,
             networkMonitor: .shared
         ))
@@ -416,5 +415,5 @@ extension Date {
 }
 
 #Preview {
-    ArticleListView(feed: Feed())
+    ArticleListView(feed: Feed(), persistenceService: PersistenceService())
 }

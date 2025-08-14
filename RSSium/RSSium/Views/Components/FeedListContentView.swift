@@ -3,6 +3,7 @@ import SwiftUI
 struct FeedListContentView: View {
     @ObservedObject var viewModel: FeedListViewModel
     @ObservedObject var networkMonitor: NetworkMonitor
+    let persistenceService: PersistenceService
     
     var body: some View {
         ZStack {
@@ -17,7 +18,7 @@ struct FeedListContentView: View {
             if viewModel.feeds.isEmpty {
                 EmptyFeedListView()
             } else {
-                FeedScrollView(viewModel: viewModel)
+                FeedScrollView(viewModel: viewModel, persistenceService: persistenceService)
             }
             
             // Loading overlay
@@ -44,12 +45,13 @@ private struct EmptyFeedListView: View {
 
 private struct FeedScrollView: View {
     @ObservedObject var viewModel: FeedListViewModel
+    let persistenceService: PersistenceService
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.feeds, id: \.id) { feed in
-                    FeedRowView(feed: feed, viewModel: viewModel)
+                    FeedRowView(feed: feed, viewModel: viewModel, persistenceService: persistenceService)
                 }
             }
             .padding(.horizontal, 16)
@@ -64,9 +66,10 @@ private struct FeedScrollView: View {
 private struct FeedRowView: View {
     let feed: Feed
     @ObservedObject var viewModel: FeedListViewModel
+    let persistenceService: PersistenceService
     
     var body: some View {
-        NavigationLink(destination: ArticleListView(feed: feed)) {
+        NavigationLink(destination: ArticleListView(feed: feed, persistenceService: persistenceService)) {
             FeedCardView(
                 feed: feed, 
                 unreadCount: viewModel.getUnreadCount(for: feed),
