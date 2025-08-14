@@ -234,20 +234,27 @@ class FeedListViewModel: ObservableObject {
     }
     
     private func updateUnreadCounts() {
-        var newUnreadCounts: [UUID: Int] = [:]
-        
-        for feed in feeds {
-            guard let feedId = feed.id else { continue }
-            do {
-                let count = try persistenceService.getUnreadCount(for: feed)
-                newUnreadCounts[feedId] = count
-            } catch {
-                print("Error getting unread count for feed \(feed.title ?? "Unknown"): \(error)")
-                newUnreadCounts[feedId] = 0
+        do {
+            // Use batch query to get all unread counts in a single database operation
+            unreadCounts = try persistenceService.getUnreadCountsForAllFeeds()
+        } catch {
+            print("Error getting batch unread counts: \(error)")
+            // Fallback to individual queries if batch operation fails
+            var newUnreadCounts: [UUID: Int] = [:]
+            
+            for feed in feeds {
+                guard let feedId = feed.id else { continue }
+                do {
+                    let count = try persistenceService.getUnreadCount(for: feed)
+                    newUnreadCounts[feedId] = count
+                } catch {
+                    print("Error getting unread count for feed \(feed.title ?? "Unknown"): \(error)")
+                    newUnreadCounts[feedId] = 0
+                }
             }
+            
+            unreadCounts = newUnreadCounts
         }
-        
-        unreadCounts = newUnreadCounts
     }
     
     func clearError() {

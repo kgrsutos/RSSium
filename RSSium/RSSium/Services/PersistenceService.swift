@@ -256,6 +256,32 @@ class PersistenceService {
         return try context.count(for: request)
     }
     
+    func getUnreadCountsForAllFeeds() throws -> [UUID: Int] {
+        let context = persistenceController.container.viewContext
+        
+        // Fetch all active feeds
+        let feedRequest: NSFetchRequest<Feed> = Feed.fetchRequest()
+        feedRequest.predicate = NSPredicate(format: "isActive == YES")
+        let feeds = try context.fetch(feedRequest)
+        
+        var unreadCounts: [UUID: Int] = [:]
+        
+        // Use individual queries for each feed
+        // For RSS reader apps with typical feed counts (10-50), this is simpler and more reliable
+        for feed in feeds {
+            guard let feedId = feed.id else { continue }
+            do {
+                let count = try getUnreadCount(for: feed)
+                unreadCounts[feedId] = count
+            } catch {
+                print("Error getting unread count for feed \(feedId): \(error)")
+                unreadCounts[feedId] = 0
+            }
+        }
+        
+        return unreadCounts
+    }
+    
     // MARK: - Background Operations
     
     func performBackgroundTask<T>(_ block: @escaping (NSManagedObjectContext) throws -> T) async throws -> T {
