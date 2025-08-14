@@ -77,15 +77,18 @@ class RefreshService: ObservableObject {
     // MARK: - Auto Sync Setup
     
     nonisolated private func setupAutoSync() {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
             networkMonitor.$isConnected
                 .dropFirst() // Skip initial value
                 .sink { [weak self] isConnected in
+                    guard let self = self else { return }
                     Task { @MainActor [weak self] in
-                        await self?.handleNetworkChange(isConnected)
+                        guard let self = self else { return }
+                        await self.handleNetworkChange(isConnected)
                     }
                 }
-                .store(in: &cancellables)
+                .store(in: &self.cancellables)
         }
     }
     
