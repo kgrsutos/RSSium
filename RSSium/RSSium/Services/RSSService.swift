@@ -233,20 +233,35 @@ class RSSService: NSObject {
     }
     
     private func containsSuspiciousXMLContent(_ xmlString: String) -> Bool {
+        // More refined security checks that don't trigger on legitimate RSS content
         let suspiciousPatterns = [
             "<!ENTITY",          // XML entity definitions (potential XXE attacks)
-            "<!DOCTYPE",         // DOCTYPE declarations with external entities
-            "SYSTEM",            // External system entities
-            "file://",           // File protocol references
-            "javascript:",       // JavaScript protocol
-            "data:text/html",    // HTML data URLs
+            "file://",           // File protocol references (outside CDATA)
+            "javascript:",       // JavaScript protocol (outside CDATA)
         ]
         
         let lowercaseXML = xmlString.lowercased()
+        
+        // Check for suspicious patterns, but be more careful about DOCTYPE
         for pattern in suspiciousPatterns {
             if lowercaseXML.contains(pattern.lowercased()) {
                 return true
             }
+        }
+        
+        // Only flag DOCTYPE if it's not inside CDATA sections (which are legitimate HTML content)
+        if lowercaseXML.contains("<!doctype") {
+            // Check if DOCTYPE appears outside CDATA sections
+            let cdataPattern = #"<!\[CDATA\[.*?\]\]>"#
+            let xmlWithoutCDATA = xmlString.replacingOccurrences(of: cdataPattern, with: "", options: .regularExpression, range: nil)
+            if xmlWithoutCDATA.lowercased().contains("<!doctype") {
+                return true
+            }
+        }
+        
+        // Check for external SYSTEM entities (more specific than just "SYSTEM")
+        if lowercaseXML.contains("<!entity") && lowercaseXML.contains("system") {
+            return true
         }
         
         // Check for excessive nesting or repetition (potential XML bombs)
