@@ -4,7 +4,10 @@ import SwiftUI
 
 @MainActor
 class BackgroundRefreshScheduler: ObservableObject {
-    static let shared = BackgroundRefreshScheduler()
+    static let shared = BackgroundRefreshScheduler(
+        refreshService: .shared,
+        persistenceService: PersistenceService(persistenceController: .shared)
+    )
     
     private let refreshTaskIdentifier = "com.rssium.refresh"
     private let cleanupTaskIdentifier = "com.rssium.cleanup"
@@ -16,9 +19,9 @@ class BackgroundRefreshScheduler: ObservableObject {
     private let refreshService: RefreshService
     private let persistenceService: PersistenceService
     
-    private init(
-        refreshService: RefreshService = .shared,
-        persistenceService: PersistenceService = PersistenceService()
+    init(
+        refreshService: RefreshService,
+        persistenceService: PersistenceService
     ) {
         self.refreshService = refreshService
         self.persistenceService = persistenceService

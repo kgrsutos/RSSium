@@ -6,6 +6,7 @@ RSSium is a SwiftUI-based RSS reader application for iOS 18.5+. Built with moder
 
 - RSS 2.0 and Atom 1.0 feed support
 - Offline reading capabilities with Core Data persistence
+- Bookmark functionality for saving important articles
 - Automatic feed refresh with background scheduling
 - Unread article management with batch operations
 - Network connectivity monitoring with auto-sync
@@ -14,7 +15,7 @@ RSSium is a SwiftUI-based RSS reader application for iOS 18.5+. Built with moder
 - Accessibility support with VoiceOver and Dynamic Type
 - Pull-to-refresh and swipe actions
 - Background App Refresh integration
-- Tab-based navigation with Feeds and Settings
+- Tab-based navigation with Feeds, Bookmarks, and Settings
 - Splash screen with animated app logo
 - Comprehensive settings interface with user preferences
 - Dependency injection pattern for improved testing
@@ -75,6 +76,12 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 
 # Example: Run FeedListViewModelTests
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/FeedListViewModelTests -parallel-testing-enabled NO
+
+# Example: Run BookmarkViewModelTests
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/BookmarkViewModelTests -parallel-testing-enabled NO
+
+# Example: Run PersistenceServiceBookmarkTests
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/PersistenceServiceBookmarkTests -parallel-testing-enabled NO
 ```
 
 ### Run Specific Test Method
@@ -92,6 +99,7 @@ All tests use **Swift Testing framework (@Test attributes) exclusively** with `#
     - `AddFeedViewModelTests`: Feed addition logic
     - `ArticleListViewModelTests`: Article list operations
     - `ArticleDetailViewModelTests`: Article detail functionality
+    - `BookmarkViewModelTests`: Bookmark management and display
   - **Service Layer Tests**:
     - `PersistenceServiceTests`: Core Data operations
     - `RSSServiceTests`: RSS/Atom feed parsing
@@ -101,6 +109,7 @@ All tests use **Swift Testing framework (@Test attributes) exclusively** with `#
     - `MemoryMonitorTests`: Memory monitoring and optimization
     - `ImageCacheServiceTests`: Image caching operations
     - `PerformanceOptimizerTests`: Performance optimization settings
+    - `PersistenceServiceBookmarkTests`: Bookmark functionality testing
 - **Integration Tests**: End-to-end workflow testing
   - `RSSLocalIntegrationTests`: Local RSS parsing integration
   - `EndToEndIntegrationTests`: Complete app flow testing
@@ -122,7 +131,7 @@ RSSium follows the MVVM pattern with a three-tier layered architecture:
 
 ### Key Components
 
-- **Views**: SwiftUI-based user interface with tab navigation, splash screen, and comprehensive settings
+- **Views**: SwiftUI-based user interface with 3-tab navigation (Feeds, Bookmarks, Settings), splash screen, and comprehensive settings
 - **ViewModels**: Presentation logic and reactive data binding with dependency injection
 - **Services**: Data persistence, RSS parsing, network monitoring, caching, and performance optimization
 - **Models**: Core Data entities (Feed, Article) with relationship management

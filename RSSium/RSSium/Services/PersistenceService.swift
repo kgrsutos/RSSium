@@ -4,7 +4,7 @@ import Foundation
 class PersistenceService {
     private let persistenceController: PersistenceController
     
-    init(persistenceController: PersistenceController = .shared) {
+    init(persistenceController: PersistenceController) {
         self.persistenceController = persistenceController
     }
     
@@ -280,6 +280,25 @@ class PersistenceService {
         }
         
         return unreadCounts
+    }
+    
+    // MARK: - Bookmark Operations
+    
+    @MainActor
+    func toggleBookmark(_ article: Article) throws {
+        let context = persistenceController.container.viewContext
+        article.isBookmarked.toggle()
+        try context.save()
+        context.processPendingChanges()
+    }
+    
+    @MainActor
+    func fetchBookmarkedArticles() throws -> [Article] {
+        let context = persistenceController.container.viewContext
+        let request: NSFetchRequest<Article> = Article.fetchRequest()
+        request.predicate = NSPredicate(format: "isBookmarked == YES")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Article.publishedDate, ascending: false)]
+        return try context.fetch(request)
     }
     
     // MARK: - Background Operations

@@ -3,6 +3,8 @@ import SwiftUI
 struct FeedListContentView: View {
     @ObservedObject var viewModel: FeedListViewModel
     @ObservedObject var networkMonitor: NetworkMonitor
+    let persistenceService: PersistenceService
+    let rssService: RSSService
     
     var body: some View {
         ZStack {
@@ -17,7 +19,12 @@ struct FeedListContentView: View {
             if viewModel.feeds.isEmpty {
                 EmptyFeedListView()
             } else {
-                FeedScrollView(viewModel: viewModel)
+                FeedScrollView(
+                    viewModel: viewModel, 
+                    persistenceService: persistenceService,
+                    rssService: rssService,
+                    networkMonitor: networkMonitor
+                )
             }
             
             // Loading overlay
@@ -44,12 +51,21 @@ private struct EmptyFeedListView: View {
 
 private struct FeedScrollView: View {
     @ObservedObject var viewModel: FeedListViewModel
+    let persistenceService: PersistenceService
+    let rssService: RSSService
+    let networkMonitor: NetworkMonitor
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(viewModel.feeds, id: \.id) { feed in
-                    FeedRowView(feed: feed, viewModel: viewModel)
+                    FeedRowView(
+                        feed: feed, 
+                        viewModel: viewModel, 
+                        persistenceService: persistenceService,
+                        rssService: rssService,
+                        networkMonitor: networkMonitor
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -64,9 +80,17 @@ private struct FeedScrollView: View {
 private struct FeedRowView: View {
     let feed: Feed
     @ObservedObject var viewModel: FeedListViewModel
+    let persistenceService: PersistenceService
+    let rssService: RSSService
+    let networkMonitor: NetworkMonitor
     
     var body: some View {
-        NavigationLink(destination: ArticleListView(feed: feed)) {
+        NavigationLink(destination: ArticleListView(
+            feed: feed, 
+            persistenceService: persistenceService,
+            rssService: rssService,
+            networkMonitor: networkMonitor
+        )) {
             FeedCardView(
                 feed: feed, 
                 unreadCount: viewModel.getUnreadCount(for: feed),

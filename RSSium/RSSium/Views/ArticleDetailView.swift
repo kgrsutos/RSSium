@@ -5,10 +5,10 @@ struct ArticleDetailView: View {
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @Environment(\.dismiss) private var dismiss
     
-    init(article: Article) {
+    init(article: Article, persistenceService: PersistenceService) {
         self._viewModel = StateObject(wrappedValue: ArticleDetailViewModel(
             article: article,
-            persistenceService: PersistenceService()
+            persistenceService: persistenceService
         ))
     }
     
@@ -97,12 +97,12 @@ struct ArticleDetailView: View {
                                         
                                         // Read status indicator
                                         HStack(spacing: 4) {
-                                            Image(systemName: viewModel.article.isRead ? "checkmark.circle.fill" : "circle")
+                                            Image(systemName: viewModel.isRead ? "checkmark.circle.fill" : "circle")
                                                 .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(viewModel.article.isRead ? .green : .white.opacity(0.8))
-                                                .symbolEffect(.bounce, value: !viewModel.article.isRead)
+                                                .foregroundColor(viewModel.isRead ? .green : .white.opacity(0.8))
+                                                .symbolEffect(.bounce, value: !viewModel.isRead)
                                             
-                                            Text(viewModel.article.isRead ? "Read" : "Unread")
+                                            Text(viewModel.isRead ? "Read" : "Unread")
                                                 .font(.system(.caption2, design: .rounded, weight: .bold))
                                                 .foregroundColor(.white.opacity(0.8))
                                                 .textCase(.uppercase)
@@ -151,24 +151,38 @@ struct ArticleDetailView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
+                        // Bookmark toggle with enhanced styling
+                        Button(action: viewModel.toggleBookmark) {
+                            Image(systemName: viewModel.bookmarkIcon)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(viewModel.isBookmarked ? .yellow : .gray)
+                                .symbolEffect(.bounce, value: viewModel.isBookmarked)
+                        }
+                        .accessibilityLabel(viewModel.bookmarkText)
+                        .accessibilityValue(viewModel.isBookmarked ? "Bookmarked" : "Not Bookmarked")
+                        .accessibilityAddTraits(viewModel.isBookmarked ? [.isSelected] : [])
+                        .accessibilityHint("Toggle bookmark status of this article")
+                        
                         // Read/Unread toggle with enhanced styling
                         Button(action: viewModel.toggleReadState) {
                             Image(systemName: viewModel.readStateIcon)
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(viewModel.article.isRead ? .green : .blue)
-                                .symbolEffect(.bounce, value: viewModel.article.isRead)
+                                .foregroundColor(viewModel.isRead ? .green : .blue)
+                                .symbolEffect(.bounce, value: viewModel.isRead)
                         }
                         .accessibilityLabel(viewModel.readStateText)
                         .accessibilityHint("Toggle read status of this article")
                         
                         // Share button with enhanced styling
-                        ShareLink(item: viewModel.article.url ?? URL(string: "https://example.com")!) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.purple)
+                        if let url = viewModel.article.url {
+                            ShareLink(item: url) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.purple)
+                            }
+                            .accessibilityLabel("Share article")
+                            .accessibilityHint("Share this article with others")
                         }
-                        .accessibilityLabel("Share article")
-                        .accessibilityHint("Share this article with others")
                         
                         // Open in browser button with enhanced styling
                         if viewModel.hasURL {
@@ -183,14 +197,16 @@ struct ArticleDetailView: View {
                     }
                 }
             }
-            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-                Button("OK") {
-                    viewModel.clearError()
-                }
+            .alert(
+                "Error",
+                isPresented: Binding(
+                    get: { viewModel.errorMessage != nil },
+                    set: { if !$0 { viewModel.clearError() } }
+                )
+            ) {
+                Button("OK") { }
             } message: {
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                }
+                Text(viewModel.errorMessage ?? "")
             }
         }
     }
@@ -214,5 +230,5 @@ struct ArticleDetailView: View {
     sampleArticle.isRead = false
     sampleArticle.feed = sampleFeed
     
-    return ArticleDetailView(article: sampleArticle)
+    return ArticleDetailView(article: sampleArticle, persistenceService: PersistenceService(persistenceController: PersistenceController.preview))
 }

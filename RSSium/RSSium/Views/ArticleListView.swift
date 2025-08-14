@@ -2,16 +2,24 @@ import SwiftUI
 
 struct ArticleListView: View {
     @StateObject private var viewModel: ArticleListViewModel
-    @StateObject private var networkMonitor = NetworkMonitor.shared
+    private let networkMonitor: NetworkMonitor
     @State private var showingError = false
     @Environment(\.dismiss) private var dismiss
+    private let persistenceService: PersistenceService
     
-    init(feed: Feed) {
+    init(
+        feed: Feed, 
+        persistenceService: PersistenceService,
+        rssService: RSSService,
+        networkMonitor: NetworkMonitor
+    ) {
+        self.persistenceService = persistenceService
+        self.networkMonitor = networkMonitor
         self._viewModel = StateObject(wrappedValue: ArticleListViewModel(
             feed: feed,
-            persistenceService: PersistenceService(),
-            rssService: .shared,
-            networkMonitor: .shared
+            persistenceService: persistenceService,
+            rssService: rssService,
+            networkMonitor: networkMonitor
         ))
     }
     
@@ -149,7 +157,7 @@ struct ArticleListView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(viewModel.articles) { article in
-                        NavigationLink(destination: ArticleDetailView(article: article)) {
+                        NavigationLink(destination: ArticleDetailView(article: article, persistenceService: persistenceService)) {
                             ArticleCardView(article: article) {
                                 viewModel.toggleReadState(for: article)
                             }
@@ -413,5 +421,12 @@ extension Date {
 }
 
 #Preview {
-    ArticleListView(feed: Feed())
+    let feed = Feed()
+    let persistenceService = PersistenceService(persistenceController: PersistenceController(inMemory: true))
+    return ArticleListView(
+        feed: feed, 
+        persistenceService: persistenceService,
+        rssService: RSSService.shared,
+        networkMonitor: NetworkMonitor.shared
+    )
 }

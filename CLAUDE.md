@@ -44,8 +44,9 @@ The `PersistenceService` abstracts Core Data complexity and provides clean async
 ### Core Data Schema
 
 - **Feed**: Stores RSS feed subscriptions (id, title, url, iconURL, lastUpdated, isActive)
-- **Article**: Stores individual articles (id, title, content, summary, author, publishedDate, url, isRead)
-- Relationship: Feed ↔ Articles (1-to-many with cascade delete)
+- **Article**: Stores individual articles (id, title, content, summary, author, publishedDate, url, isRead, isBookmarked, isStoredOffline)
+- **Relationship**: Feed ↔ Article (one-to-many; cascade delete from Feed to Article)
+- **Critical**: Article.feed uses `deletionRule="Nullify"`, Feed.articles uses `deletionRule="Cascade"`. Deleting a Feed removes all associated Articles (including bookmarks).
 
 ### RSS Parsing
 
@@ -158,6 +159,8 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/ArticleDetailViewModelTests -parallel-testing-enabled NO
 
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/BookmarkViewModelTests -parallel-testing-enabled NO
+
 # Run service layer tests
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/NetworkMonitorTests -parallel-testing-enabled NO
 
@@ -172,6 +175,9 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/ImageCacheServiceTests -parallel-testing-enabled NO
 
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/PerformanceOptimizerTests -parallel-testing-enabled NO
+
+# Run bookmark functionality tests
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/PersistenceServiceBookmarkTests -parallel-testing-enabled NO
 
 # Run integration tests
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/RSSLocalIntegrationTests -parallel-testing-enabled NO
@@ -203,10 +209,14 @@ The presentation layer is implemented using SwiftUI with modular component archi
 ### Navigation Structure
 ```
 ContentView (Entry Point)
-└── FeedListView
-    ├── AddFeedView (Modal Sheet)
-    └── ArticleListView
-        └── ArticleDetailView
+├── TabView
+    ├── FeedListView (Tab 1)
+    │   ├── AddFeedView (Modal Sheet)
+    │   └── ArticleListView
+    │       └── ArticleDetailView
+    ├── BookmarkView (Tab 2) 
+    │   └── ArticleDetailView
+    └── SettingsView (Tab 3)
 ```
 
 ### ViewModel Layer Architecture
@@ -228,8 +238,13 @@ The ViewModel layer implements MVVM pattern with reactive data binding:
   - Handles feed refresh with loading indicators
 - **ArticleDetailViewModel**: Individual article display and interaction
   - Formats article content for display
-  - Manages read state changes
+  - Manages read state changes and bookmark toggling
   - Provides browser integration for external links
+  - **Critical**: Must call `objectWillChange.send()` after Core Data property changes for UI updates
+- **BookmarkViewModel**: Bookmark management and display
+  - Fetches and displays bookmarked articles sorted by date
+  - Handles bookmark removal via swipe actions
+  - Provides empty state handling
 
 ### ViewModel Usage Patterns
 
@@ -262,6 +277,43 @@ feedListViewModel.deleteFeed(feed)
 await addFeedViewModel.validateFeed() // Previews feed before adding
 ```
 
+## Dependency Injection Architecture
+
+The application uses explicit dependency injection to ensure consistent service instances and improve testability:
+
+### Main App Flow
+```swift
+// ContentView creates all services with single PersistenceController
+private let persistenceService = PersistenceService(persistenceController: .shared)
+private let refreshService = RefreshService(persistenceService: persistenceService)
+private let backgroundRefreshScheduler = BackgroundRefreshScheduler(
+    refreshService: refreshService,
+    persistenceService: persistenceService
+)
+
+// Services are then injected into child views
+FeedListView(
+    persistenceService: persistenceService,
+    refreshService: refreshService,
+    rssService: rssService,
+    networkMonitor: networkMonitor
+)
+```
+
+### Testing Pattern
+```swift
+// Always create isolated stacks for tests
+let controller = PersistenceController(inMemory: true)
+let service = PersistenceService(persistenceController: controller)
+let refreshService = RefreshService(persistenceService: service)
+```
+
+### Key Principles
+- **Single Source of Truth**: ContentView creates and owns all service instances
+- **Explicit Dependencies**: No hidden singletons or default initializers in production views
+- **Test Isolation**: Each test creates its own service stack
+- **Legacy Compatibility**: Some `.shared` services still exist for backward compatibility with singleton-based components (PerformanceOptimizer, RSSiumApp)
+
 ## Implementation Status
 
 Track detailed progress in `.kiro/specs/ios-rss-reader/tasks.md`. The application is feature-complete with all core functionality implemented:
@@ -290,6 +342,8 @@ Current phase:
 
 **Test Isolation**: Each test creates its own in-memory Core Data stack to ensure complete isolation and prevent cross-test contamination.
 
+**PersistenceService Initialization**: Always use explicit initialization with `PersistenceService(persistenceController:)`. The main app uses dependency injection from ContentView to ensure single instance consistency. Note: Some legacy `.shared` services still create their own PersistenceService instances for backward compatibility with singleton-based architecture.
+
 **CRITICAL**: Never use XCTest framework - project exclusively uses Swift Testing framework with @Test annotations and #expect assertions. UI tests are not supported and have been removed.
 
 ## Key Technical Details
@@ -306,13 +360,18 @@ Current phase:
 
 ### PersistenceService Example
 ```swift
-let service = PersistenceService()
+// ALWAYS use explicit initialization with PersistenceController
+let service = PersistenceService(persistenceController: .shared)
 
 // Create feed
 let feed = try service.createFeed(title: "Example", url: URL(string: "https://example.com/feed.xml")!)
 
 // Import articles with duplicate detection
 try await service.importArticles(from: parsedArticles, for: feed)
+
+// Bookmark operations
+try service.toggleBookmark(article)
+let bookmarkedArticles = try service.fetchBookmarkedArticles()
 
 // Background operations
 try await service.performBackgroundTask { context in
@@ -356,8 +415,8 @@ Standard Xcode iOS app organization:
 - Project file: `RSSium/RSSium.xcodeproj`
 - Models: Core Data entities (Feed, Article) with extensions
 - Services: PersistenceService, RSSService, RefreshService, NetworkMonitor, ImageCacheService, BackgroundRefreshScheduler, PerformanceOptimizer, MemoryMonitor
-- ViewModels: FeedListViewModel, AddFeedViewModel, ArticleListViewModel, ArticleDetailViewModel
-- Views: FeedListView, AddFeedView, ArticleListView, ArticleDetailView, SettingsView, SplashView
+- ViewModels: FeedListViewModel, AddFeedViewModel, ArticleListViewModel, ArticleDetailViewModel, BookmarkViewModel
+- Views: FeedListView, AddFeedView, ArticleListView, ArticleDetailView, BookmarkView, SettingsView, SplashView
 - Components: FeedCardView, FeedListContentView (in Views/Components/)
 - Extensions: Color+RSSium for app-wide theming
 
@@ -372,6 +431,8 @@ Standard Xcode iOS app organization:
 - **Security**: URL validation includes comprehensive security checks for malicious content
 - **Component Architecture**: Large views are decomposed into smaller, reusable components
 - **Memory Management**: Configurable thresholds allow runtime optimization adjustment
+- **Core Data UI Updates**: When modifying Core Data objects in ViewModels, always call `objectWillChange.send()` to trigger SwiftUI updates
+- **Bookmark Data Persistence**: Bookmarked articles are permanently deleted when their parent feed is removed (cascade delete from Feed → Article). Consider warning users on feed deletion and/or decoupling bookmarks into a separate SavedItems store if you want bookmarks to persist after feed removal.
 
 ### SwiftUI View Patterns
 

@@ -1,17 +1,36 @@
 import SwiftUI
 
 struct FeedListView: View {
-    @StateObject private var viewModel = FeedListViewModel(
-        persistenceService: PersistenceService(),
-        rssService: .shared,
-        refreshService: .shared,
-        networkMonitor: .shared
-    )
-    @StateObject private var networkMonitor = NetworkMonitor.shared
+    private let persistenceService: PersistenceService
+    private let networkMonitor: NetworkMonitor
+    private let rssService: RSSService
+    @StateObject private var viewModel: FeedListViewModel
+    
+    init(
+        persistenceService: PersistenceService,
+        refreshService: RefreshService,
+        rssService: RSSService,
+        networkMonitor: NetworkMonitor
+    ) {
+        self.persistenceService = persistenceService
+        self.networkMonitor = networkMonitor
+        self.rssService = rssService
+        self._viewModel = StateObject(wrappedValue: FeedListViewModel(
+            persistenceService: persistenceService,
+            rssService: rssService,
+            refreshService: refreshService,
+            networkMonitor: networkMonitor
+        ))
+    }
     
     var body: some View {
         NavigationStack {
-            FeedListContentView(viewModel: viewModel, networkMonitor: networkMonitor)
+            FeedListContentView(
+                viewModel: viewModel, 
+                networkMonitor: networkMonitor, 
+                persistenceService: persistenceService,
+                rssService: rssService
+            )
                 .navigationTitle("RSS Feeds")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
@@ -139,5 +158,12 @@ struct FeedListErrorMessage: View {
 }
 
 #Preview {
-    FeedListView()
+    let persistenceService = PersistenceService(persistenceController: PersistenceController(inMemory: true))
+    let refreshService = RefreshService(persistenceService: persistenceService)
+    return FeedListView(
+        persistenceService: persistenceService,
+        refreshService: refreshService,
+        rssService: RSSService.shared,
+        networkMonitor: NetworkMonitor.shared
+    )
 }

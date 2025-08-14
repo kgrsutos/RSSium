@@ -3,6 +3,20 @@ import SwiftUI
 struct ContentView: View {
     @State private var showSplash = true
     
+    private let persistenceService = PersistenceService(persistenceController: .shared)
+    private let rssService = RSSService.shared
+    private let networkMonitor = NetworkMonitor.shared
+    private let refreshService: RefreshService
+    private let backgroundRefreshScheduler: BackgroundRefreshScheduler
+    
+    init() {
+        self.refreshService = RefreshService(persistenceService: persistenceService)
+        self.backgroundRefreshScheduler = BackgroundRefreshScheduler(
+            refreshService: refreshService,
+            persistenceService: persistenceService
+        )
+    }
+    
     var body: some View {
         ZStack {
             if showSplash {
@@ -10,10 +24,22 @@ struct ContentView: View {
                     .transition(.opacity)
             } else {
                 TabView {
-                    FeedListView()
-                        .tabItem {
-                            Label("Feeds", systemImage: "dot.radiowaves.left.and.right")
-                        }
+                    FeedListView(
+                        persistenceService: persistenceService,
+                        refreshService: refreshService,
+                        rssService: rssService,
+                        networkMonitor: networkMonitor
+                    )
+                    .tabItem {
+                        Label("Feeds", systemImage: "dot.radiowaves.left.and.right")
+                    }
+                    
+                    BookmarkView(
+                        viewModel: BookmarkViewModel(persistenceService: persistenceService)
+                    )
+                    .tabItem {
+                        Label("Bookmarks", systemImage: "star.fill")
+                    }
                     
                     SettingsView()
                         .tabItem {
