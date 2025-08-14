@@ -163,6 +163,16 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/RefreshServiceTests -parallel-testing-enabled NO
 
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/RSSServiceTests -parallel-testing-enabled NO
+
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/BackgroundRefreshSchedulerTests -parallel-testing-enabled NO
+
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/MemoryMonitorTests -parallel-testing-enabled NO
+
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/ImageCacheServiceTests -parallel-testing-enabled NO
+
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/PerformanceOptimizerTests -parallel-testing-enabled NO
+
 # Run integration tests
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/RSSLocalIntegrationTests -parallel-testing-enabled NO
 

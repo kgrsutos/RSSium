@@ -87,14 +87,20 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 All tests use **Swift Testing framework (@Test attributes) exclusively** with `#expect` assertions:
 
 - **Unit Tests** (`RSSiumTests/`): Test individual components in isolation
-  - `FeedListViewModelTests`: Feed list management
-  - `AddFeedViewModelTests`: Feed addition logic
-  - `ArticleListViewModelTests`: Article list operations
-  - `ArticleDetailViewModelTests`: Article detail functionality
-  - `PersistenceServiceTests`: Core Data operations
-  - `RSSServiceTests`: RSS/Atom feed parsing
-  - `NetworkMonitorTests`: Network connectivity monitoring
-  - `RefreshServiceTests`: Feed refresh logic
+  - **ViewModel Tests**: 
+    - `FeedListViewModelTests`: Feed list management
+    - `AddFeedViewModelTests`: Feed addition logic
+    - `ArticleListViewModelTests`: Article list operations
+    - `ArticleDetailViewModelTests`: Article detail functionality
+  - **Service Layer Tests**:
+    - `PersistenceServiceTests`: Core Data operations
+    - `RSSServiceTests`: RSS/Atom feed parsing
+    - `NetworkMonitorTests`: Network connectivity monitoring
+    - `RefreshServiceTests`: Feed refresh logic
+    - `BackgroundRefreshSchedulerTests`: Background refresh functionality
+    - `MemoryMonitorTests`: Memory monitoring and optimization
+    - `ImageCacheServiceTests`: Image caching operations
+    - `PerformanceOptimizerTests`: Performance optimization settings
 - **Integration Tests**: End-to-end workflow testing
   - `RSSLocalIntegrationTests`: Local RSS parsing integration
   - `EndToEndIntegrationTests`: Complete app flow testing
