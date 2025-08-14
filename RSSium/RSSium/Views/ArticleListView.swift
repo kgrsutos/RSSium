@@ -415,5 +415,5 @@ extension Date {
 }
 
 #Preview {
-    ArticleListView(feed: Feed(), persistenceService: PersistenceService())
+    ArticleListView(feed: Feed(), persistenceService: PersistenceService(persistenceController: PersistenceController(inMemory: true)))
 }

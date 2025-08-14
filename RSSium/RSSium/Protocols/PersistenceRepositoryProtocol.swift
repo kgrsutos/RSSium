@@ -33,7 +33,7 @@ protocol PersistenceRepositoryProtocol {
 class CoreDataPersistenceRepository: PersistenceRepositoryProtocol {
     private let persistenceService: PersistenceService
     
-    init(persistenceService: PersistenceService = PersistenceService()) {
+    init(persistenceService: PersistenceService) {
         self.persistenceService = persistenceService
     }
     

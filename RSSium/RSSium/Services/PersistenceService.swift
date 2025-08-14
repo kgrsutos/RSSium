@@ -4,7 +4,7 @@ import Foundation
 class PersistenceService {
     private let persistenceController: PersistenceController
     
-    init(persistenceController: PersistenceController = .shared) {
+    init(persistenceController: PersistenceController) {
         self.persistenceController = persistenceController
     }
     

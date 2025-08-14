@@ -5,11 +5,10 @@ struct FeedListView: View {
     @StateObject private var viewModel: FeedListViewModel
     @StateObject private var networkMonitor = NetworkMonitor.shared
     
-    init() {
-        let service = PersistenceService()
-        self.persistenceService = service
+    init(persistenceService: PersistenceService) {
+        self.persistenceService = persistenceService
         self._viewModel = StateObject(wrappedValue: FeedListViewModel(
-            persistenceService: service,
+            persistenceService: persistenceService,
             rssService: .shared,
             refreshService: .shared,
             networkMonitor: .shared
@@ -146,5 +145,5 @@ struct FeedListErrorMessage: View {
 }
 
 #Preview {
-    FeedListView()
+    FeedListView(persistenceService: PersistenceService(persistenceController: PersistenceController(inMemory: true)))
 }

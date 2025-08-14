@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var showSplash = true
     
-    private let persistenceService = PersistenceService()
+    private let persistenceService = PersistenceService(persistenceController: .shared)
     private let rssService = RSSService.shared
     private let refreshService = RefreshService.shared
     private let networkMonitor = NetworkMonitor.shared
@@ -15,7 +15,7 @@ struct ContentView: View {
                     .transition(.opacity)
             } else {
                 TabView {
-                    FeedListView()
+                    FeedListView(persistenceService: persistenceService)
                         .tabItem {
                             Label("Feeds", systemImage: "dot.radiowaves.left.and.right")
                         }

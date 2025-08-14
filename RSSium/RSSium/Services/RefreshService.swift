@@ -45,7 +45,7 @@ struct RefreshResult {
 
 @MainActor
 class RefreshService: ObservableObject {
-    nonisolated static let shared = RefreshService()
+    nonisolated static let shared = RefreshService(persistenceService: PersistenceService(persistenceController: .shared))
     
     @Published var isRefreshing = false
     @Published var refreshProgress: Double = 0.0
@@ -58,8 +58,8 @@ class RefreshService: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var wasOffline = false
     
-    nonisolated private init(
-        persistenceService: PersistenceService = PersistenceService(),
+    nonisolated init(
+        persistenceService: PersistenceService,
         rssService: RSSService = RSSService.shared
     ) {
         self.persistenceService = persistenceService
