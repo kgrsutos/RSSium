@@ -30,7 +30,7 @@ class ArticleListViewModel: ObservableObject {
         var systemImage: String {
             switch self {
             case .all: return "tray.full"
-            case .unread: return "tray.badge"
+            case .unread: return "circle.fill"
             }
         }
     }
