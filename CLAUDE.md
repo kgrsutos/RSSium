@@ -45,8 +45,8 @@ The `PersistenceService` abstracts Core Data complexity and provides clean async
 
 - **Feed**: Stores RSS feed subscriptions (id, title, url, iconURL, lastUpdated, isActive)
 - **Article**: Stores individual articles (id, title, content, summary, author, publishedDate, url, isRead, isBookmarked, isStoredOffline)
-- **Relationship**: Feed ↔ Articles (1-to-many with cascade delete)
-- **Critical**: Article.feed relationship uses `deletionRule="Nullify"`, Feed.articles uses `deletionRule="Cascade"` - when a Feed is deleted, ALL associated articles (including bookmarks) are permanently removed
+- **Relationship**: Feed ↔ Article (one-to-many; cascade delete from Feed to Article)
+- **Critical**: Article.feed uses `deletionRule="Nullify"`, Feed.articles uses `deletionRule="Cascade"`. Deleting a Feed removes all associated Articles (including bookmarks).
 
 ### RSS Parsing
 
@@ -392,7 +392,7 @@ Standard Xcode iOS app organization:
 - **Component Architecture**: Large views are decomposed into smaller, reusable components
 - **Memory Management**: Configurable thresholds allow runtime optimization adjustment
 - **Core Data UI Updates**: When modifying Core Data objects in ViewModels, always call `objectWillChange.send()` to trigger SwiftUI updates
-- **Bookmark Data Persistence**: Bookmarked articles are permanently deleted when their parent feed is removed (cascade delete relationship)
+- **Bookmark Data Persistence**: Bookmarked articles are permanently deleted when their parent feed is removed (cascade delete from Feed → Article). Consider warning users on feed deletion and/or decoupling bookmarks into a separate SavedItems store if you want bookmarks to persist after feed removal.
 
 ### SwiftUI View Patterns
 

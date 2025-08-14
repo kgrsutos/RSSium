@@ -2,18 +2,24 @@ import SwiftUI
 
 struct ArticleListView: View {
     @StateObject private var viewModel: ArticleListViewModel
-    @StateObject private var networkMonitor = NetworkMonitor.shared
+    private let networkMonitor: NetworkMonitor
     @State private var showingError = false
     @Environment(\.dismiss) private var dismiss
     private let persistenceService: PersistenceService
     
-    init(feed: Feed, persistenceService: PersistenceService) {
+    init(
+        feed: Feed, 
+        persistenceService: PersistenceService,
+        rssService: RSSService,
+        networkMonitor: NetworkMonitor
+    ) {
         self.persistenceService = persistenceService
+        self.networkMonitor = networkMonitor
         self._viewModel = StateObject(wrappedValue: ArticleListViewModel(
             feed: feed,
             persistenceService: persistenceService,
-            rssService: .shared,
-            networkMonitor: .shared
+            rssService: rssService,
+            networkMonitor: networkMonitor
         ))
     }
     
@@ -415,5 +421,12 @@ extension Date {
 }
 
 #Preview {
-    ArticleListView(feed: Feed(), persistenceService: PersistenceService(persistenceController: PersistenceController(inMemory: true)))
+    let feed = Feed()
+    let persistenceService = PersistenceService(persistenceController: PersistenceController(inMemory: true))
+    return ArticleListView(
+        feed: feed, 
+        persistenceService: persistenceService,
+        rssService: RSSService.shared,
+        networkMonitor: NetworkMonitor.shared
+    )
 }

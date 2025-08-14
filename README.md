@@ -76,6 +76,12 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 
 # Example: Run FeedListViewModelTests
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/FeedListViewModelTests -parallel-testing-enabled NO
+
+# Example: Run BookmarkViewModelTests
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/BookmarkViewModelTests -parallel-testing-enabled NO
+
+# Example: Run PersistenceServiceBookmarkTests
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/PersistenceServiceBookmarkTests -parallel-testing-enabled NO
 ```
 
 ### Run Specific Test Method
