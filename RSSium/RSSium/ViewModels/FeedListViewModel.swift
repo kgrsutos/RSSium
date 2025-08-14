@@ -26,10 +26,10 @@ class FeedListViewModel: ObservableObject {
     private var lastFailedFeedURL: String?
     
     init(
-        persistenceService: PersistenceService = PersistenceService(),
-        rssService: RSSService = .shared,
-        refreshService: RefreshService = .shared,
-        networkMonitor: NetworkMonitor = .shared,
+        persistenceService: PersistenceService,
+        rssService: RSSService,
+        refreshService: RefreshService,
+        networkMonitor: NetworkMonitor,
         autoLoadFeeds: Bool = true
     ) {
         self.persistenceService = persistenceService

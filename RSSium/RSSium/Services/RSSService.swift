@@ -190,6 +190,9 @@ class RSSService: NSObject {
     }
     
     private func parseFeedData(_ data: Data) async throws -> RSSChannel {
+        // Security check: Validate XML data size
+        try validateXMLData(data)
+        
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let parser = RSSParser()
@@ -204,18 +207,154 @@ class RSSService: NSObject {
     }
     
     internal func parseData(_ data: Data) throws -> RSSChannel {
+        // Security check: Validate XML data size
+        try validateXMLData(data)
+        
         let parser = RSSParser()
         return try parser.parse(data: data)
+    }
+    
+    private func validateXMLData(_ data: Data) throws {
+        // 1. Check data size (prevent XML bombs)
+        let maxDataSize = 50 * 1024 * 1024 // 50MB limit
+        if data.count > maxDataSize {
+            throw RSSError.invalidFeedFormat
+        }
+        
+        // 2. Basic XML structure validation
+        guard let xmlString = String(data: data, encoding: .utf8) else {
+            throw RSSError.unsupportedEncoding
+        }
+        
+        // 3. Check for suspicious XML content
+        if containsSuspiciousXMLContent(xmlString) {
+            throw RSSError.invalidFeedFormat
+        }
+    }
+    
+    private func containsSuspiciousXMLContent(_ xmlString: String) -> Bool {
+        let suspiciousPatterns = [
+            "<!ENTITY",          // XML entity definitions (potential XXE attacks)
+            "<!DOCTYPE",         // DOCTYPE declarations with external entities
+            "SYSTEM",            // External system entities
+            "file://",           // File protocol references
+            "javascript:",       // JavaScript protocol
+            "data:text/html",    // HTML data URLs
+        ]
+        
+        let lowercaseXML = xmlString.lowercased()
+        for pattern in suspiciousPatterns {
+            if lowercaseXML.contains(pattern.lowercased()) {
+                return true
+            }
+        }
+        
+        // Check for excessive nesting or repetition (potential XML bombs)
+        let entityCount = xmlString.components(separatedBy: "&").count - 1
+        if entityCount > 100 {
+            return true
+        }
+        
+        return false
     }
     
     func validateFeedURL(_ urlString: String) -> Bool {
         guard let url = URL(string: urlString),
               let scheme = url.scheme,
               ["http", "https"].contains(scheme.lowercased()),
-              url.host != nil else {
+              let host = url.host else {
             return false
         }
+        
+        // Enhanced security validations
+        
+        // 1. Prevent access to private/local networks
+        if isPrivateOrLocalHost(host) {
+            return false
+        }
+        
+        // 2. Prevent access to suspicious domains
+        if isSuspiciousDomain(host) {
+            return false
+        }
+        
+        // 3. Validate URL length to prevent DoS attacks
+        if urlString.count > 2000 {
+            return false
+        }
+        
+        // 4. Ensure reasonable port numbers
+        if let port = url.port, !isValidPort(port) {
+            return false
+        }
+        
         return true
+    }
+    
+    private func isPrivateOrLocalHost(_ host: String) -> Bool {
+        let lowercaseHost = host.lowercased()
+        
+        // Check for localhost variations
+        if ["localhost", "127.0.0.1", "::1"].contains(lowercaseHost) {
+            return true
+        }
+        
+        // Check for private IP ranges (simplified check)
+        if lowercaseHost.hasPrefix("192.168.") ||
+           lowercaseHost.hasPrefix("10.") ||
+           lowercaseHost.hasPrefix("172.16.") ||
+           lowercaseHost.hasPrefix("172.17.") ||
+           lowercaseHost.hasPrefix("172.18.") ||
+           lowercaseHost.hasPrefix("172.19.") ||
+           lowercaseHost.hasPrefix("172.2") ||
+           lowercaseHost.hasPrefix("172.30.") ||
+           lowercaseHost.hasPrefix("172.31.") {
+            return true
+        }
+        
+        // Check for IPv6 private ranges (simplified)
+        if lowercaseHost.hasPrefix("fe80:") || // Link-local
+           lowercaseHost.hasPrefix("fc00:") || // Unique local
+           lowercaseHost.hasPrefix("fd00:") {  // Unique local
+            return true
+        }
+        
+        return false
+    }
+    
+    private func isSuspiciousDomain(_ host: String) -> Bool {
+        let lowercaseHost = host.lowercased()
+        
+        // Block common suspicious patterns
+        let suspiciousPatterns = [
+            ".onion",           // Tor hidden services
+            ".i2p",             // I2P network
+            "bit.ly",           // URL shorteners (can hide malicious URLs)
+            "tinyurl.com",
+            "t.co",
+            "goo.gl",
+            "ow.ly"
+        ]
+        
+        for pattern in suspiciousPatterns {
+            if lowercaseHost.contains(pattern) {
+                return true
+            }
+        }
+        
+        // Check for excessive subdomains (potential DGA domains)
+        let subdomains = host.components(separatedBy: ".")
+        if subdomains.count > 5 {
+            return true
+        }
+        
+        return false
+    }
+    
+    private func isValidPort(_ port: Int) -> Bool {
+        // Allow common HTTP/HTTPS ports and some common RSS feed ports
+        let allowedPorts = Set([80, 443, 8080, 8443, 3000, 4000, 5000, 8000, 9000])
+        return allowedPorts.contains(port) || (port >= 1024 && port <= 65535)
     }
 }
 

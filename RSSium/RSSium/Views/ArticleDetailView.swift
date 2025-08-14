@@ -6,7 +6,10 @@ struct ArticleDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     init(article: Article) {
-        self._viewModel = StateObject(wrappedValue: ArticleDetailViewModel(article: article))
+        self._viewModel = StateObject(wrappedValue: ArticleDetailViewModel(
+            article: article,
+            persistenceService: PersistenceService()
+        ))
     }
     
     var body: some View {

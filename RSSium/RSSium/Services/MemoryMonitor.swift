@@ -8,13 +8,44 @@ class MemoryMonitor: ObservableObject {
     @Published var currentMemoryUsage: Double = 0.0
     @Published var isMemoryPressureHigh = false
     
-    private let memoryWarningThreshold: Double = 0.8 // 80% of available memory
-    private let memoryCleanupThreshold: Double = 0.9 // 90% of available memory
+    // Configurable memory thresholds
+    struct MemoryThresholds {
+        let warningThreshold: Double
+        let cleanupThreshold: Double
+        
+        static let `default` = MemoryThresholds(
+            warningThreshold: 0.8,  // 80% of available memory
+            cleanupThreshold: 0.9   // 90% of available memory
+        )
+        
+        static let conservative = MemoryThresholds(
+            warningThreshold: 0.7,  // 70% of available memory
+            cleanupThreshold: 0.8   // 80% of available memory
+        )
+        
+        static let aggressive = MemoryThresholds(
+            warningThreshold: 0.9,  // 90% of available memory
+            cleanupThreshold: 0.95  // 95% of available memory
+        )
+    }
+    
+    private var thresholds: MemoryThresholds
     private var timer: Timer?
     
-    private init() {
+    private init(thresholds: MemoryThresholds = .default) {
+        self.thresholds = thresholds
         startMonitoring()
         setupMemoryPressureNotifications()
+    }
+    
+    // Allow updating thresholds at runtime
+    func updateThresholds(_ newThresholds: MemoryThresholds) {
+        self.thresholds = newThresholds
+    }
+    
+    // Get current thresholds
+    var currentThresholds: MemoryThresholds {
+        return thresholds
     }
     
     deinit {
@@ -52,11 +83,11 @@ class MemoryMonitor: ObservableObject {
         let usage = getMemoryUsage()
         currentMemoryUsage = usage
         
-        if usage > memoryCleanupThreshold {
+        if usage > thresholds.cleanupThreshold {
             Task {
                 await performMemoryCleanup()
             }
-        } else if usage > memoryWarningThreshold {
+        } else if usage > thresholds.warningThreshold {
             isMemoryPressureHigh = true
         } else {
             isMemoryPressureHigh = false

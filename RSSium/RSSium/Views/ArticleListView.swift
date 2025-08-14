@@ -7,7 +7,12 @@ struct ArticleListView: View {
     @Environment(\.dismiss) private var dismiss
     
     init(feed: Feed) {
-        self._viewModel = StateObject(wrappedValue: ArticleListViewModel(feed: feed))
+        self._viewModel = StateObject(wrappedValue: ArticleListViewModel(
+            feed: feed,
+            persistenceService: PersistenceService(),
+            rssService: .shared,
+            networkMonitor: .shared
+        ))
     }
     
     var body: some View {

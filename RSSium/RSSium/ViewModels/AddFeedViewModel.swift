@@ -14,7 +14,7 @@ class AddFeedViewModel: ObservableObject {
     private let rssService: RSSService
     private let networkMonitor: NetworkMonitor
     
-    init(rssService: RSSService = .shared, networkMonitor: NetworkMonitor = .shared) {
+    init(rssService: RSSService, networkMonitor: NetworkMonitor) {
         self.rssService = rssService
         self.networkMonitor = networkMonitor
     }

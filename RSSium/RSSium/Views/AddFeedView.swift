@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct AddFeedView: View {
-    @StateObject private var viewModel = AddFeedViewModel()
+    @StateObject private var viewModel = AddFeedViewModel(
+        rssService: .shared,
+        networkMonitor: .shared
+    )
     @Environment(\.dismiss) private var dismiss
     
     let onAddFeed: (String, String?) async -> Void

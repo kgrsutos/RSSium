@@ -35,7 +35,7 @@ class ArticleListViewModel: ObservableObject {
         }
     }
     
-    init(feed: Feed, persistenceService: PersistenceService = PersistenceService(), rssService: RSSService = .shared, networkMonitor: NetworkMonitor = .shared) {
+    init(feed: Feed, persistenceService: PersistenceService, rssService: RSSService, networkMonitor: NetworkMonitor) {
         self.feed = feed
         self.persistenceService = persistenceService
         self.rssService = rssService

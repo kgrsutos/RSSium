@@ -15,7 +15,7 @@ class ArticleDetailViewModel: ObservableObject {
     private let persistenceService: PersistenceService
     private var cancellables = Set<AnyCancellable>()
     
-    init(article: Article, persistenceService: PersistenceService = PersistenceService()) {
+    init(article: Article, persistenceService: PersistenceService) {
         self.article = article
         self.persistenceService = persistenceService
         
