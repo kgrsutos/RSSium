@@ -14,6 +14,10 @@ RSSium is a SwiftUI-based RSS reader application for iOS 18.5+. Built with moder
 - Accessibility support with VoiceOver and Dynamic Type
 - Pull-to-refresh and swipe actions
 - Background App Refresh integration
+- Tab-based navigation with Feeds and Settings
+- Splash screen with animated app logo
+- Comprehensive settings interface with user preferences
+- Dependency injection pattern for improved testing
 
 ## Requirements
 
@@ -112,10 +116,11 @@ RSSium follows the MVVM pattern with a three-tier layered architecture:
 
 ### Key Components
 
-- **Views**: SwiftUI-based user interface with accessibility support
-- **ViewModels**: Presentation logic and reactive data binding
+- **Views**: SwiftUI-based user interface with tab navigation, splash screen, and comprehensive settings
+- **ViewModels**: Presentation logic and reactive data binding with dependency injection
 - **Services**: Data persistence, RSS parsing, network monitoring, caching, and performance optimization
 - **Models**: Core Data entities (Feed, Article) with relationship management
+- **Protocols**: Abstraction layer for persistence operations enabling testability
 
 ### Service Layer
 
@@ -147,9 +152,11 @@ RSSium/
 │   ├── Models/            # Core Data models and extensions
 │   ├── Services/          # Data persistence, networking, caching, and optimization
 │   ├── ViewModels/        # MVVM ViewModels with dependency injection
-│   ├── Views/             # SwiftUI Views with accessibility
-│   └── Extensions/        # Shared extensions and theming
+│   ├── Views/             # SwiftUI Views with tab navigation, splash, and settings
+│   ├── Extensions/        # Shared extensions and theming
+│   └── Protocols/         # Abstraction protocols for dependency injection
 └── RSSiumTests/           # Unit tests (Swift Testing framework only)
+    └── Mocks/             # Mock implementations for testing
 ```
 
 ### Testing Framework Notes
