@@ -12,7 +12,7 @@ struct ContentView: View {
                 TabView {
                     FeedListView()
                         .tabItem {
-                            Label("Feeds", systemImage: "rss")
+                            Label("Feeds", systemImage: "dot.radiowaves.left.and.right")
                         }
                     
                     SettingsView()

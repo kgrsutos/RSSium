@@ -34,7 +34,7 @@ struct AddFeedView: View {
                                     .frame(width: 60, height: 60)
                                     .shadow(color: .orange.opacity(0.3), radius: 8, x: 0, y: 4)
                                 
-                                Image(systemName: "rss")
+                                Image(systemName: "dot.radiowaves.left.and.right")
                                     .font(.system(size: 24, weight: .medium))
                                     .foregroundColor(.white)
                                     .symbolEffect(.bounce.byLayer, options: .speed(0.5).repeat(.continuous))
@@ -147,7 +147,7 @@ struct AddFeedView: View {
                                     // Preview card
                                     VStack(alignment: .leading, spacing: 12) {
                                         HStack {
-                                            Image(systemName: "rss.circle.fill")
+                                            Image(systemName: "antenna.radiowaves.left.and.right.circle.fill")
                                                 .font(.title2)
                                                 .foregroundColor(.orange)
                                             

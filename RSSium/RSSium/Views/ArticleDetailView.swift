@@ -53,7 +53,7 @@ struct ArticleDetailView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     // Feed source
                                     HStack(spacing: 8) {
-                                        Image(systemName: "rss.circle.fill")
+                                        Image(systemName: "antenna.radiowaves.left.and.right.circle.fill")
                                             .font(.system(size: 16, weight: .medium))
                                             .foregroundColor(.white.opacity(0.9))
                                         

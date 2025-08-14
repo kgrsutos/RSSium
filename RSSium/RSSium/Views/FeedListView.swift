@@ -83,7 +83,7 @@ struct FeedListView: View {
                     VStack(spacing: 20) {
                         if networkMonitor.isConnected {
                             // RSS icon with animation
-                            Image(systemName: "rss")
+                            Image(systemName: "dot.radiowaves.left.and.right")
                                 .font(.system(size: 60, weight: .light))
                                 .foregroundStyle(LinearGradient(
                                     colors: [.orange, .red],
@@ -198,7 +198,7 @@ struct FeedCardView: View {
                         ))
                         .frame(width: 44, height: 44)
                     
-                    Image(systemName: hasError ? "exclamationmark.triangle.fill" : "rss")
+                    Image(systemName: hasError ? "exclamationmark.triangle.fill" : "dot.radiowaves.left.and.right")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.white)
                         .symbolEffect(.bounce, value: hasError)
