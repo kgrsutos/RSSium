@@ -178,7 +178,12 @@ struct PersistenceServiceBookmarkTests {
             #expect(fetchedArticles.first?.isBookmarked == true)
             
             // Verify it's the same article by checking object ID
-            let fetchedArticle = try backgroundContext.existingObject(with: articleID) as! Article
+            // Note: existingObject(with:) will throw NSError if object doesn't exist, 
+            // and the object ID is guaranteed to exist since we just created it
+            let managedObject = try backgroundContext.existingObject(with: articleID)
+            guard let fetchedArticle = managedObject as? Article else {
+                fatalError("Object at ID \(articleID) is not an Article")
+            }
             #expect(fetchedArticle.isBookmarked == true)
         }
     }

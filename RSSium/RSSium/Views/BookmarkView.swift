@@ -44,10 +44,9 @@ struct BookmarkView: View {
                                 BookmarkArticleRow(article: article)
                             }
                             .swipeActions(edge: .trailing) {
-                                Button("Remove") {
+                                Button("Remove", role: .destructive) {
                                     viewModel.toggleBookmark(for: article)
                                 }
-                                .tint(.red)
                             }
                         }
                     }
