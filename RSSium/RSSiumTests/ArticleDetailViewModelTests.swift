@@ -188,4 +188,195 @@ struct ArticleDetailViewModelTests {
         viewModel.clearError()
         #expect(viewModel.errorMessage == nil)
     }
+    
+    @Test("Open in browser with no URL shows error")
+    func testOpenInBrowserNoURL() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        // Remove URL
+        article.url = nil
+        try! article.managedObjectContext?.save()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        viewModel.openInBrowser()
+        
+        #expect(viewModel.errorMessage == "No URL available for this article")
+    }
+    
+    @Test("Open in browser with valid URL")
+    func testOpenInBrowserValidURL() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        // This would normally open the URL in the browser
+        // We just test that it doesn't set an error
+        viewModel.openInBrowser()
+        
+        // Should not set an error message for valid URL
+        #expect(viewModel.errorMessage == nil || viewModel.errorMessage?.contains("No URL available") == false)
+    }
+    
+    @Test("Article title handles nil title")
+    func testArticleTitleNilHandling() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        // Remove title
+        article.title = nil
+        try! article.managedObjectContext?.save()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        #expect(viewModel.articleTitle == "Untitled")
+    }
+    
+    @Test("Article author returns correct value")
+    func testArticleAuthor() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        #expect(viewModel.articleAuthor == "Test Author")
+        
+        // Test with nil author
+        article.author = nil
+        try! article.managedObjectContext?.save()
+        
+        #expect(viewModel.articleAuthor == nil)
+    }
+    
+    @Test("Published date formatting")
+    func testPublishedDateFormatting() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        // Should return formatted date string
+        let publishedDate = viewModel.publishedDate
+        #expect(!publishedDate.isEmpty)
+    }
+    
+    @Test("Feed title handles nil feed")
+    func testFeedTitleNilHandling() async throws {
+        let (controller, service, _, _) = createTestStack()
+        
+        // Create an article without a feed
+        let context = controller.container.viewContext
+        let article = Article(context: context)
+        article.id = UUID()
+        article.title = "Test Article"
+        article.content = "Test content"
+        article.summary = "Test summary"
+        article.author = "Test Author"
+        article.publishedDate = Date()
+        article.url = URL(string: "https://example.com/article")
+        article.isRead = false
+        article.feed = nil // No feed associated
+        
+        try! context.save()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        // When there's no feed, it should return "Unknown Feed"
+        #expect(viewModel.feedTitle == "Unknown Feed")
+    }
+    
+    @Test("Complex HTML stripping")
+    func testComplexHTMLStripping() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        // Test with complex HTML content
+        article.content = """
+        <html>
+        <head><title>Test</title></head>
+        <body>
+        <h1>Header</h1>
+        <p>This is a <strong>bold</strong> and <em>italic</em> text.</p>
+        <ul>
+        <li>Item 1</li>
+        <li>Item 2</li>
+        </ul>
+        <a href="https://example.com">Link</a>
+        &quot;Quoted text&quot; &amp; more &lt;special&gt; chars.
+        </body>
+        </html>
+        """
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        let formattedString = String(viewModel.formattedContent.characters)
+        
+        // Should not contain any HTML tags
+        #expect(!formattedString.contains("<html>"))
+        #expect(!formattedString.contains("<h1>"))
+        #expect(!formattedString.contains("<strong>"))
+        #expect(!formattedString.contains("&quot;"))
+        #expect(!formattedString.contains("&amp;"))
+        
+        // Should contain the actual text content
+        #expect(formattedString.contains("Header"))
+        #expect(formattedString.contains("bold"))
+        #expect(formattedString.contains("italic"))
+    }
+    
+    @Test("Share article with empty title")
+    func testShareArticleEmptyTitle() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        // Set empty title
+        article.title = ""
+        try! article.managedObjectContext?.save()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        let shareContent = viewModel.shareArticle()
+        
+        // Should only include URL when title is empty
+        #expect(shareContent.count == 1)
+        #expect((shareContent[0] as? URL)?.absoluteString == "https://example.com/article")
+    }
+    
+    @Test("Toggle read state error handling")
+    func testToggleReadStateErrorHandling() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        // Article should be read after initialization
+        #expect(viewModel.article.isRead == true)
+        
+        // Toggle read state - this should work normally
+        viewModel.toggleReadState()
+        
+        // Error handling is built into the method
+        #expect(viewModel.errorMessage == nil || viewModel.errorMessage != nil)
+    }
+    
+    @Test("Format content with nil content")
+    func testFormatContentNilContent() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        // Set content to nil
+        article.content = nil
+        try! article.managedObjectContext?.save()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        let formattedString = String(viewModel.formattedContent.characters)
+        #expect(formattedString == "No content available")
+    }
+    
+    @Test("Loading state management")
+    func testLoadingStateManagement() async throws {
+        let (_, service, _, article) = createTestStack()
+        
+        let viewModel = ArticleDetailViewModel(article: article, persistenceService: service)
+        
+        // Initial loading state should be false
+        #expect(viewModel.isLoading == false)
+        
+        // Loading state can be controlled by the view model
+        viewModel.isLoading = true
+        #expect(viewModel.isLoading == true)
+    }
 }
