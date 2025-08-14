@@ -162,19 +162,27 @@ struct PersistenceServiceBookmarkTests {
         let (controller, persistenceService) = createIsolatedTestStack()
         
         let (_, article) = try createTestArticleWithFeed(persistenceService: persistenceService)
+        let articleID = article.objectID
         
         // Toggle to bookmarked
         try persistenceService.toggleBookmark(article)
         
-        // Verify persistence by creating a new context and fetching
-        let context = controller.container.viewContext
-        context.refreshAllObjects()
-        
-        let fetchedArticles = try persistenceService.fetchBookmarkedArticles()
-        #expect(fetchedArticles.count == 1)
-        #expect(fetchedArticles.first?.title == "Test Article")
-        #expect(fetchedArticles.first?.isBookmarked == true)
+        // Verify persistence using a separate background context
+        try await controller.container.performBackgroundTask { backgroundContext in
+            let request = Article.fetchRequest()
+            request.predicate = NSPredicate(format: "isBookmarked == YES")
+            
+            let fetchedArticles = try backgroundContext.fetch(request)
+            #expect(fetchedArticles.count == 1)
+            #expect(fetchedArticles.first?.title == "Test Article")
+            #expect(fetchedArticles.first?.isBookmarked == true)
+            
+            // Verify it's the same article by checking object ID
+            let fetchedArticle = try backgroundContext.existingObject(with: articleID) as! Article
+            #expect(fetchedArticle.isBookmarked == true)
+        }
     }
+
     
     @Test("Multiple toggle bookmark operations are idempotent")
     @MainActor func multipleToggleBookmarkIdempotent() async throws {

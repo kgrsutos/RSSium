@@ -59,6 +59,8 @@ struct BookmarkViewModelTests {
         _ = try createTestArticleWithFeed(persistenceService: persistenceService, isBookmarked: false)
         
         let viewModel = BookmarkViewModel(persistenceService: persistenceService)
+        // Explicitly call loadBookmarkedArticles to ensure robustness against future changes
+        viewModel.loadBookmarkedArticles()
         
         #expect(viewModel.bookmarkedArticles.count == 1)
         #expect(viewModel.hasBookmarks == true)
@@ -73,6 +75,8 @@ struct BookmarkViewModelTests {
         let article = try createTestArticleWithFeed(persistenceService: persistenceService, isBookmarked: false)
         
         let viewModel = BookmarkViewModel(persistenceService: persistenceService)
+        // Explicitly call loadBookmarkedArticles to ensure robustness against future changes
+        viewModel.loadBookmarkedArticles()
         
         // Initially no bookmarks
         #expect(viewModel.bookmarkedArticles.isEmpty)
@@ -93,7 +97,7 @@ struct BookmarkViewModelTests {
     }
     
     @Test("Multiple bookmarked articles should be sorted by date")
-    @MainActor func multipleBooksmarkedArticlesSorting() async throws {
+    @MainActor func multipleBookmarkedArticlesSorting() async throws {
         let (_, persistenceService) = createIsolatedTestStack()
         
         let testURL = URL(string: "https://example.com/feed.xml")!
@@ -128,6 +132,8 @@ struct BookmarkViewModelTests {
         try persistenceService.toggleBookmark(newerArticle)
         
         let viewModel = BookmarkViewModel(persistenceService: persistenceService)
+        // Explicitly call loadBookmarkedArticles to ensure robustness against future changes
+        viewModel.loadBookmarkedArticles()
         
         #expect(viewModel.bookmarkedArticles.count == 2)
         // Should be sorted by published date (newest first)

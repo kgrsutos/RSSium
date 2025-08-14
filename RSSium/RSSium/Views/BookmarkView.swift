@@ -3,10 +3,15 @@ import SwiftUI
 struct BookmarkView: View {
     @StateObject private var viewModel: BookmarkViewModel
     
-    init() {
-        self._viewModel = StateObject(wrappedValue: BookmarkViewModel(
-            persistenceService: PersistenceService()
-        ))
+    init(viewModel: BookmarkViewModel) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
+    }
+    
+    private var isShowingError: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { _ in viewModel.clearError() }
+        )
     }
     
     var body: some View {
@@ -34,7 +39,7 @@ struct BookmarkView: View {
                     )
                 } else {
                     List {
-                        ForEach(viewModel.bookmarkedArticles, id: \.id) { article in
+                        ForEach(viewModel.bookmarkedArticles, id: \.objectID) { article in
                             NavigationLink(destination: ArticleDetailView(article: article)) {
                                 BookmarkArticleRow(article: article)
                             }
@@ -56,7 +61,7 @@ struct BookmarkView: View {
             .onAppear {
                 viewModel.loadBookmarkedArticles()
             }
-            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            .alert("Error", isPresented: isShowingError) {
                 Button("OK") {
                     viewModel.clearError()
                 }
@@ -96,5 +101,9 @@ struct BookmarkArticleRow: View {
 }
 
 #Preview {
-    BookmarkView()
+    BookmarkView(
+        viewModel: BookmarkViewModel(
+            persistenceService: PersistenceService(persistenceController: PersistenceController(inMemory: true))
+        )
+    )
 }
