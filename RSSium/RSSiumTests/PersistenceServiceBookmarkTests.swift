@@ -168,8 +168,8 @@ struct PersistenceServiceBookmarkTests {
         // Toggle to bookmarked
         try persistenceService.toggleBookmark(article)
         
-        // Verify persistence using a separate background context
-        try await controller.container.performBackgroundTask { backgroundContext in
+        // Verify persistence using a separate background context via service helper
+        try await persistenceService.performBackgroundTask { backgroundContext in
             let request = Article.fetchRequest()
             request.predicate = NSPredicate(format: "isBookmarked == YES")
             
