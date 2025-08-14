@@ -121,7 +121,7 @@ struct ArticleDetailView: View {
                         }
                     }
                     
-                    // Content area with card design
+                    // Content area
                     VStack(alignment: .leading, spacing: 24) {
                         Text(viewModel.formattedContent)
                             .font(.system(.body, design: .default))
@@ -135,12 +135,6 @@ struct ArticleDetailView: View {
                         Spacer(minLength: 50)
                     }
                     .padding(.top, 24)
-                    .background {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(.regularMaterial)
-                            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: -5)
-                    }
-                    .padding(.top, -20)
                 }
             }
         }
