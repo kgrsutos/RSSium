@@ -67,6 +67,8 @@ class ArticleDetailViewModel: ObservableObject {
             } else {
                 try persistenceService.markArticleAsRead(article)
             }
+            // Force UI update by triggering objectWillChange
+            objectWillChange.send()
         } catch {
             errorMessage = "Failed to update read state: \(error.localizedDescription)"
         }
@@ -127,6 +129,24 @@ class ArticleDetailViewModel: ObservableObject {
     
     var readStateText: String {
         article.isRead ? "Mark as Unread" : "Mark as Read"
+    }
+    
+    func toggleBookmark() {
+        do {
+            try persistenceService.toggleBookmark(article)
+            // Force UI update by triggering objectWillChange
+            objectWillChange.send()
+        } catch {
+            errorMessage = "Failed to toggle bookmark: \(error.localizedDescription)"
+        }
+    }
+    
+    var bookmarkIcon: String {
+        article.isBookmarked ? "star.fill" : "star"
+    }
+    
+    var bookmarkText: String {
+        article.isBookmarked ? "Remove Bookmark" : "Add Bookmark"
     }
     
     func clearError() {

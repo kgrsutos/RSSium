@@ -4,6 +4,7 @@
         <attribute name="author" optional="YES" attributeType="String"/>
         <attribute name="content" optional="YES" attributeType="String"/>
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isBookmarked" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="isRead" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="isStoredOffline" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="publishedDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>

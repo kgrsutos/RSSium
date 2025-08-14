@@ -282,6 +282,23 @@ class PersistenceService {
         return unreadCounts
     }
     
+    // MARK: - Bookmark Operations
+    
+    func toggleBookmark(_ article: Article) throws {
+        let context = persistenceController.container.viewContext
+        article.isBookmarked.toggle()
+        try context.save()
+        context.processPendingChanges()
+    }
+    
+    func fetchBookmarkedArticles() throws -> [Article] {
+        let context = persistenceController.container.viewContext
+        let request: NSFetchRequest<Article> = Article.fetchRequest()
+        request.predicate = NSPredicate(format: "isBookmarked == YES")
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Article.publishedDate, ascending: false)]
+        return try context.fetch(request)
+    }
+    
     // MARK: - Background Operations
     
     func performBackgroundTask<T>(_ block: @escaping (NSManagedObjectContext) throws -> T) async throws -> T {

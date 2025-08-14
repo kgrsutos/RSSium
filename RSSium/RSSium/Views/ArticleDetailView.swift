@@ -151,6 +151,16 @@ struct ArticleDetailView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
+                        // Bookmark toggle with enhanced styling
+                        Button(action: viewModel.toggleBookmark) {
+                            Image(systemName: viewModel.bookmarkIcon)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(viewModel.article.isBookmarked ? .yellow : .gray)
+                                .symbolEffect(.bounce, value: viewModel.article.isBookmarked)
+                        }
+                        .accessibilityLabel(viewModel.bookmarkText)
+                        .accessibilityHint("Toggle bookmark status of this article")
+                        
                         // Read/Unread toggle with enhanced styling
                         Button(action: viewModel.toggleReadState) {
                             Image(systemName: viewModel.readStateIcon)

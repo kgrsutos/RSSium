@@ -44,8 +44,9 @@ The `PersistenceService` abstracts Core Data complexity and provides clean async
 ### Core Data Schema
 
 - **Feed**: Stores RSS feed subscriptions (id, title, url, iconURL, lastUpdated, isActive)
-- **Article**: Stores individual articles (id, title, content, summary, author, publishedDate, url, isRead)
-- Relationship: Feed ↔ Articles (1-to-many with cascade delete)
+- **Article**: Stores individual articles (id, title, content, summary, author, publishedDate, url, isRead, isBookmarked, isStoredOffline)
+- **Relationship**: Feed ↔ Articles (1-to-many with cascade delete)
+- **Critical**: Article.feed relationship uses `deletionRule="Nullify"`, Feed.articles uses `deletionRule="Cascade"` - when a Feed is deleted, ALL associated articles (including bookmarks) are permanently removed
 
 ### RSS Parsing
 
@@ -158,6 +159,8 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/ArticleDetailViewModelTests -parallel-testing-enabled NO
 
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/BookmarkViewModelTests -parallel-testing-enabled NO
+
 # Run service layer tests
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/NetworkMonitorTests -parallel-testing-enabled NO
 
@@ -172,6 +175,9 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/ImageCacheServiceTests -parallel-testing-enabled NO
 
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/PerformanceOptimizerTests -parallel-testing-enabled NO
+
+# Run bookmark functionality tests
+xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/PersistenceServiceBookmarkTests -parallel-testing-enabled NO
 
 # Run integration tests
 xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:RSSiumTests/RSSLocalIntegrationTests -parallel-testing-enabled NO
@@ -203,10 +209,14 @@ The presentation layer is implemented using SwiftUI with modular component archi
 ### Navigation Structure
 ```
 ContentView (Entry Point)
-└── FeedListView
-    ├── AddFeedView (Modal Sheet)
-    └── ArticleListView
-        └── ArticleDetailView
+├── TabView
+    ├── FeedListView (Tab 1)
+    │   ├── AddFeedView (Modal Sheet)
+    │   └── ArticleListView
+    │       └── ArticleDetailView
+    ├── BookmarkView (Tab 2) 
+    │   └── ArticleDetailView
+    └── SettingsView (Tab 3)
 ```
 
 ### ViewModel Layer Architecture
@@ -228,8 +238,13 @@ The ViewModel layer implements MVVM pattern with reactive data binding:
   - Handles feed refresh with loading indicators
 - **ArticleDetailViewModel**: Individual article display and interaction
   - Formats article content for display
-  - Manages read state changes
+  - Manages read state changes and bookmark toggling
   - Provides browser integration for external links
+  - **Critical**: Must call `objectWillChange.send()` after Core Data property changes for UI updates
+- **BookmarkViewModel**: Bookmark management and display
+  - Fetches and displays bookmarked articles sorted by date
+  - Handles bookmark removal via swipe actions
+  - Provides empty state handling
 
 ### ViewModel Usage Patterns
 
@@ -314,6 +329,10 @@ let feed = try service.createFeed(title: "Example", url: URL(string: "https://ex
 // Import articles with duplicate detection
 try await service.importArticles(from: parsedArticles, for: feed)
 
+// Bookmark operations
+try service.toggleBookmark(article)
+let bookmarkedArticles = try service.fetchBookmarkedArticles()
+
 // Background operations
 try await service.performBackgroundTask { context in
     // Heavy operations in background
@@ -356,8 +375,8 @@ Standard Xcode iOS app organization:
 - Project file: `RSSium/RSSium.xcodeproj`
 - Models: Core Data entities (Feed, Article) with extensions
 - Services: PersistenceService, RSSService, RefreshService, NetworkMonitor, ImageCacheService, BackgroundRefreshScheduler, PerformanceOptimizer, MemoryMonitor
-- ViewModels: FeedListViewModel, AddFeedViewModel, ArticleListViewModel, ArticleDetailViewModel
-- Views: FeedListView, AddFeedView, ArticleListView, ArticleDetailView, SettingsView, SplashView
+- ViewModels: FeedListViewModel, AddFeedViewModel, ArticleListViewModel, ArticleDetailViewModel, BookmarkViewModel
+- Views: FeedListView, AddFeedView, ArticleListView, ArticleDetailView, BookmarkView, SettingsView, SplashView
 - Components: FeedCardView, FeedListContentView (in Views/Components/)
 - Extensions: Color+RSSium for app-wide theming
 
@@ -372,6 +391,8 @@ Standard Xcode iOS app organization:
 - **Security**: URL validation includes comprehensive security checks for malicious content
 - **Component Architecture**: Large views are decomposed into smaller, reusable components
 - **Memory Management**: Configurable thresholds allow runtime optimization adjustment
+- **Core Data UI Updates**: When modifying Core Data objects in ViewModels, always call `objectWillChange.send()` to trigger SwiftUI updates
+- **Bookmark Data Persistence**: Bookmarked articles are permanently deleted when their parent feed is removed (cascade delete relationship)
 
 ### SwiftUI View Patterns
 

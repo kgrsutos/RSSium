@@ -15,6 +15,11 @@ struct ContentView: View {
                             Label("Feeds", systemImage: "dot.radiowaves.left.and.right")
                         }
                     
+                    BookmarkView()
+                        .tabItem {
+                            Label("Bookmarks", systemImage: "star.fill")
+                        }
+                    
                     SettingsView()
                         .tabItem {
                             Label("Settings", systemImage: "gear")
