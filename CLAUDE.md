@@ -277,6 +277,43 @@ feedListViewModel.deleteFeed(feed)
 await addFeedViewModel.validateFeed() // Previews feed before adding
 ```
 
+## Dependency Injection Architecture
+
+The application uses explicit dependency injection to ensure consistent service instances and improve testability:
+
+### Main App Flow
+```swift
+// ContentView creates all services with single PersistenceController
+private let persistenceService = PersistenceService(persistenceController: .shared)
+private let refreshService = RefreshService(persistenceService: persistenceService)
+private let backgroundRefreshScheduler = BackgroundRefreshScheduler(
+    refreshService: refreshService,
+    persistenceService: persistenceService
+)
+
+// Services are then injected into child views
+FeedListView(
+    persistenceService: persistenceService,
+    refreshService: refreshService,
+    rssService: rssService,
+    networkMonitor: networkMonitor
+)
+```
+
+### Testing Pattern
+```swift
+// Always create isolated stacks for tests
+let controller = PersistenceController(inMemory: true)
+let service = PersistenceService(persistenceController: controller)
+let refreshService = RefreshService(persistenceService: service)
+```
+
+### Key Principles
+- **Single Source of Truth**: ContentView creates and owns all service instances
+- **Explicit Dependencies**: No hidden singletons or default initializers in production views
+- **Test Isolation**: Each test creates its own service stack
+- **Legacy Compatibility**: Some `.shared` services still exist for backward compatibility with singleton-based components (PerformanceOptimizer, RSSiumApp)
+
 ## Implementation Status
 
 Track detailed progress in `.kiro/specs/ios-rss-reader/tasks.md`. The application is feature-complete with all core functionality implemented:
@@ -305,6 +342,8 @@ Current phase:
 
 **Test Isolation**: Each test creates its own in-memory Core Data stack to ensure complete isolation and prevent cross-test contamination.
 
+**PersistenceService Initialization**: Always use explicit initialization with `PersistenceService(persistenceController:)`. The main app uses dependency injection from ContentView to ensure single instance consistency. Note: Some legacy `.shared` services still create their own PersistenceService instances for backward compatibility with singleton-based architecture.
+
 **CRITICAL**: Never use XCTest framework - project exclusively uses Swift Testing framework with @Test annotations and #expect assertions. UI tests are not supported and have been removed.
 
 ## Key Technical Details
@@ -321,7 +360,8 @@ Current phase:
 
 ### PersistenceService Example
 ```swift
-let service = PersistenceService()
+// ALWAYS use explicit initialization with PersistenceController
+let service = PersistenceService(persistenceController: .shared)
 
 // Create feed
 let feed = try service.createFeed(title: "Example", url: URL(string: "https://example.com/feed.xml")!)

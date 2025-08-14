@@ -12,12 +12,20 @@ class ArticleDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var formattedContent: AttributedString = AttributedString()
     
+    // Published properties for reactive UI updates
+    @Published var isRead: Bool = false
+    @Published var isBookmarked: Bool = false
+    
     private let persistenceService: PersistenceService
     private var cancellables = Set<AnyCancellable>()
     
     init(article: Article, persistenceService: PersistenceService) {
         self.article = article
         self.persistenceService = persistenceService
+        
+        // Initialize published properties from article state
+        self.isRead = article.isRead
+        self.isBookmarked = article.isBookmarked
         
         // Automatically mark as read when article is opened
         markArticleAsRead()
@@ -31,6 +39,8 @@ class ArticleDetailViewModel: ObservableObject {
         
         do {
             try persistenceService.markArticleAsRead(article)
+            // Update published property for reactive UI
+            isRead = true
         } catch {
             errorMessage = "Failed to mark article as read: \(error.localizedDescription)"
         }
@@ -64,11 +74,13 @@ class ArticleDetailViewModel: ObservableObject {
                 if let feed = article.feed {
                     try persistenceService.updateFeed(feed)
                 }
+                // Update published property for reactive UI
+                isRead = false
             } else {
                 try persistenceService.markArticleAsRead(article)
+                // Update published property for reactive UI
+                isRead = true
             }
-            // Force UI update by triggering objectWillChange
-            objectWillChange.send()
         } catch {
             errorMessage = "Failed to update read state: \(error.localizedDescription)"
         }
@@ -124,29 +136,29 @@ class ArticleDetailViewModel: ObservableObject {
     }
     
     var readStateIcon: String {
-        article.isRead ? "checkmark.circle.fill" : "circle"
+        isRead ? "checkmark.circle.fill" : "circle"
     }
     
     var readStateText: String {
-        article.isRead ? "Mark as Unread" : "Mark as Read"
+        isRead ? "Mark as Unread" : "Mark as Read"
     }
     
     func toggleBookmark() {
         do {
             try persistenceService.toggleBookmark(article)
-            // Force UI update by triggering objectWillChange
-            objectWillChange.send()
+            // Update published property for reactive UI
+            isBookmarked = article.isBookmarked
         } catch {
             errorMessage = "Failed to toggle bookmark: \(error.localizedDescription)"
         }
     }
     
     var bookmarkIcon: String {
-        article.isBookmarked ? "star.fill" : "star"
+        isBookmarked ? "star.fill" : "star"
     }
     
     var bookmarkText: String {
-        article.isBookmarked ? "Remove Bookmark" : "Add Bookmark"
+        isBookmarked ? "Remove Bookmark" : "Add Bookmark"
     }
     
     func clearError() {

@@ -97,12 +97,12 @@ struct ArticleDetailView: View {
                                         
                                         // Read status indicator
                                         HStack(spacing: 4) {
-                                            Image(systemName: viewModel.article.isRead ? "checkmark.circle.fill" : "circle")
+                                            Image(systemName: viewModel.isRead ? "checkmark.circle.fill" : "circle")
                                                 .font(.system(size: 16, weight: .medium))
-                                                .foregroundColor(viewModel.article.isRead ? .green : .white.opacity(0.8))
-                                                .symbolEffect(.bounce, value: !viewModel.article.isRead)
+                                                .foregroundColor(viewModel.isRead ? .green : .white.opacity(0.8))
+                                                .symbolEffect(.bounce, value: !viewModel.isRead)
                                             
-                                            Text(viewModel.article.isRead ? "Read" : "Unread")
+                                            Text(viewModel.isRead ? "Read" : "Unread")
                                                 .font(.system(.caption2, design: .rounded, weight: .bold))
                                                 .foregroundColor(.white.opacity(0.8))
                                                 .textCase(.uppercase)
@@ -155,20 +155,20 @@ struct ArticleDetailView: View {
                         Button(action: viewModel.toggleBookmark) {
                             Image(systemName: viewModel.bookmarkIcon)
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(viewModel.article.isBookmarked ? .yellow : .gray)
-                                .symbolEffect(.bounce, value: viewModel.article.isBookmarked)
+                                .foregroundColor(viewModel.isBookmarked ? .yellow : .gray)
+                                .symbolEffect(.bounce, value: viewModel.isBookmarked)
                         }
                         .accessibilityLabel(viewModel.bookmarkText)
-                        .accessibilityValue(viewModel.article.isBookmarked ? "Bookmarked" : "Not Bookmarked")
-                        .accessibilityAddTraits(viewModel.article.isBookmarked ? [.isSelected] : [])
+                        .accessibilityValue(viewModel.isBookmarked ? "Bookmarked" : "Not Bookmarked")
+                        .accessibilityAddTraits(viewModel.isBookmarked ? [.isSelected] : [])
                         .accessibilityHint("Toggle bookmark status of this article")
                         
                         // Read/Unread toggle with enhanced styling
                         Button(action: viewModel.toggleReadState) {
                             Image(systemName: viewModel.readStateIcon)
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(viewModel.article.isRead ? .green : .blue)
-                                .symbolEffect(.bounce, value: viewModel.article.isRead)
+                                .foregroundColor(viewModel.isRead ? .green : .blue)
+                                .symbolEffect(.bounce, value: viewModel.isRead)
                         }
                         .accessibilityLabel(viewModel.readStateText)
                         .accessibilityHint("Toggle read status of this article")
