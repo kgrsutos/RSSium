@@ -132,14 +132,14 @@ class PersistenceService {
         let context = persistenceController.container.viewContext
         article.isRead = true
         try context.save()
-        context.refresh(article, mergeChanges: true)
+        context.processPendingChanges()
     }
     
     func markArticlesAsRead(_ articles: [Article]) throws {
         let context = persistenceController.container.viewContext
         articles.forEach { $0.isRead = true }
         try context.save()
-        articles.forEach { context.refresh($0, mergeChanges: true) }
+        context.processPendingChanges()
     }
     
     // MARK: - Offline Support
@@ -201,16 +201,15 @@ class PersistenceService {
     
     func deleteAllArticles(for feed: Feed) throws {
         let context = persistenceController.container.viewContext
-        let request: NSFetchRequest<NSFetchRequestResult> = Article.fetchRequest()
+        let request: NSFetchRequest<Article> = Article.fetchRequest()
         request.predicate = NSPredicate(format: "feed == %@", feed)
         
-        let deleteRequest = NSBatchDeleteRequest(fetchRequest: request)
-        deleteRequest.resultType = .resultTypeObjectIDs
+        let articles = try context.fetch(request)
+        articles.forEach { context.delete($0) }
+        try context.save()
         
-        let result = try context.execute(deleteRequest) as? NSBatchDeleteResult
-        let objectIDArray = result?.result as? [NSManagedObjectID] ?? []
-        let changes = [NSDeletedObjectsKey: objectIDArray]
-        NSManagedObjectContext.mergeChanges(fromRemoteContextSave: changes, into: [context])
+        // Ensure context is synchronized after deletion
+        context.processPendingChanges()
     }
     
     func markAllArticlesAsRead(for feed: Feed? = nil) throws {
@@ -226,7 +225,9 @@ class PersistenceService {
         let articles = try context.fetch(request)
         articles.forEach { $0.isRead = true }
         try context.save()
-        articles.forEach { context.refresh($0, mergeChanges: true) }
+        
+        // Ensure all changes are processed and context is synchronized
+        context.processPendingChanges()
     }
     
     // MARK: - Statistics

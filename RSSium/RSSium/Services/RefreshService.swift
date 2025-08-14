@@ -45,7 +45,7 @@ struct RefreshResult {
 
 @MainActor
 class RefreshService: ObservableObject {
-    static let shared = RefreshService()
+    nonisolated static let shared = RefreshService()
     
     @Published var isRefreshing = false
     @Published var refreshProgress: Double = 0.0
@@ -58,29 +58,35 @@ class RefreshService: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var wasOffline = false
     
-    private init(
+    nonisolated private init(
         persistenceService: PersistenceService = PersistenceService(),
         rssService: RSSService = RSSService.shared
     ) {
         self.persistenceService = persistenceService
         self.rssService = rssService
         self.networkMonitor = NetworkMonitor.shared
-        self.wasOffline = !networkMonitor.isConnected
+        
+        // Initialize offline state in main actor context
+        Task { @MainActor in
+            self.wasOffline = !self.networkMonitor.isConnected
+        }
         
         setupAutoSync()
     }
     
     // MARK: - Auto Sync Setup
     
-    private func setupAutoSync() {
-        networkMonitor.$isConnected
-            .dropFirst() // Skip initial value
-            .sink { [weak self] isConnected in
-                Task { @MainActor [weak self] in
-                    await self?.handleNetworkChange(isConnected)
+    nonisolated private func setupAutoSync() {
+        Task { @MainActor in
+            networkMonitor.$isConnected
+                .dropFirst() // Skip initial value
+                .sink { [weak self] isConnected in
+                    Task { @MainActor [weak self] in
+                        await self?.handleNetworkChange(isConnected)
+                    }
                 }
-            }
-            .store(in: &cancellables)
+                .store(in: &cancellables)
+        }
     }
     
     private func handleNetworkChange(_ isConnected: Bool) async {

@@ -4,6 +4,23 @@ import Foundation
 class PersistenceController {
     static let shared = PersistenceController()
     
+    // Shared model instance for in-memory containers to prevent entity conflicts
+    private static let sharedTestModel: NSManagedObjectModel = {
+        var bundle = Bundle.main
+        var modelURL = bundle.url(forResource: "RSSiumModel", withExtension: "momd")
+        
+        if modelURL == nil {
+            bundle = Bundle(for: PersistenceController.self)
+            modelURL = bundle.url(forResource: "RSSiumModel", withExtension: "momd")
+        }
+        
+        guard let url = modelURL,
+              let model = NSManagedObjectModel(contentsOf: url) else {
+            fatalError("Failed to load Core Data model")
+        }
+        return model
+    }()
+    
     // Separate test instance to avoid conflicts
     static let test: PersistenceController = {
         let controller = PersistenceController(inMemory: true)
@@ -44,25 +61,27 @@ class PersistenceController {
     let container: NSPersistentContainer
     
     init(inMemory: Bool = false) {
-        // Try to get model from the appropriate bundle - check main bundle first, then current bundle
-        var bundle = Bundle.main
-        var modelURL = bundle.url(forResource: "RSSiumModel", withExtension: "momd")
-        
-        if modelURL == nil {
-            bundle = Bundle(for: PersistenceController.self)
-            modelURL = bundle.url(forResource: "RSSiumModel", withExtension: "momd")
-        }
-        
-        // If still no model, try to create a simple container without explicit model
-        if let url = modelURL, let model = NSManagedObjectModel(contentsOf: url) {
-            container = NSPersistentContainer(name: "RSSiumModel", managedObjectModel: model)
+        if inMemory {
+            // Use shared model for ALL in-memory containers to prevent entity conflicts
+            // Create container with unique identifier for complete isolation
+            let uniqueId = UUID().uuidString
+            container = NSPersistentContainer(name: "RSSiumModel_\(uniqueId)", managedObjectModel: PersistenceController.sharedTestModel)
         } else {
-            // Fallback: let NSPersistentContainer find the model automatically
-            container = NSPersistentContainer(name: "RSSiumModel")
+            // Regular initialization for persistent storage
+            container = NSPersistentContainer(name: "RSSiumModel", managedObjectModel: PersistenceController.sharedTestModel)
         }
         
         if inMemory {
-            container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
+            // Create unique in-memory store URL for complete test isolation
+            let storeDescription = NSPersistentStoreDescription()
+            storeDescription.type = NSInMemoryStoreType
+            storeDescription.url = URL(fileURLWithPath: "/dev/null").appendingPathComponent(UUID().uuidString)
+            storeDescription.shouldAddStoreAsynchronously = false
+            // Disable persistent history tracking for tests
+            storeDescription.setOption(false as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            // Disable remote change notifications for tests
+            storeDescription.setOption(false as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+            container.persistentStoreDescriptions = [storeDescription]
         }
         
         container.loadPersistentStores { (storeDescription, error) in
@@ -71,9 +90,18 @@ class PersistenceController {
             }
         }
         
-        // Optimize memory usage
-        container.viewContext.automaticallyMergesChangesFromParent = true
-        container.viewContext.undoManager = nil // Disable undo for better memory performance
+        // Configure context for proper test isolation
+        container.viewContext.undoManager = nil
+        if inMemory {
+            // For tests: use specific merge policy to ensure consistency
+            container.viewContext.automaticallyMergesChangesFromParent = false
+            container.viewContext.shouldDeleteInaccessibleFaults = true
+            container.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
+        } else {
+            // For production: enable automatic merging
+            container.viewContext.automaticallyMergesChangesFromParent = true
+            container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        }
         
         // Configure fetch batch size for better memory management
         if !inMemory {

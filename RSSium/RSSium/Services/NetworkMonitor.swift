@@ -4,7 +4,7 @@ import Combine
 
 @MainActor
 class NetworkMonitor: ObservableObject {
-    static let shared = NetworkMonitor()
+    nonisolated static let shared = NetworkMonitor()
     
     @Published var isConnected = false
     @Published var connectionType: NWInterface.InterfaceType?
@@ -12,7 +12,7 @@ class NetworkMonitor: ObservableObject {
     private let networkMonitor = NWPathMonitor()
     private let workerQueue = DispatchQueue(label: "NetworkMonitor")
     
-    private init() {
+    nonisolated private init() {
         startMonitoring()
     }
     
@@ -20,7 +20,7 @@ class NetworkMonitor: ObservableObject {
         networkMonitor.cancel()
     }
     
-    private func startMonitoring() {
+    nonisolated private func startMonitoring() {
         networkMonitor.start(queue: workerQueue)
         networkMonitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor [weak self] in
