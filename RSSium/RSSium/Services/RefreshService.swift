@@ -109,9 +109,8 @@ class RefreshService: ObservableObject {
         
         do {
             _ = try await refreshAllFeeds()
-            print("Auto-sync completed successfully")
         } catch {
-            print("Auto-sync failed: \(error.localizedDescription)")
+            // Auto-sync failure is handled silently to avoid user interruption
         }
     }
     
@@ -137,6 +136,7 @@ class RefreshService: ObservableObject {
         
         do {
             let activeFeeds = try await getActiveFeeds()
+            
             guard !activeFeeds.isEmpty else {
                 throw RefreshError.noActiveFeeds
             }
@@ -146,8 +146,6 @@ class RefreshService: ObservableObject {
             
             if result.isCompleteFailure {
                 throw RefreshError.completeFailure("All feeds failed to refresh")
-            } else if result.isPartialSuccess {
-                throw RefreshError.partialFailure(result.failedFeeds, result.totalFeeds)
             }
             
             return result
@@ -192,6 +190,7 @@ class RefreshService: ObservableObject {
             )
             
         } catch {
+            print("Feed refresh failed for '\(feed.title ?? "Unknown")' (URL: \(feedUrl.absoluteString)): \(error.localizedDescription)")
             return FeedRefreshResult(
                 feed: feed,
                 success: false,
@@ -208,12 +207,8 @@ class RefreshService: ObservableObject {
     // MARK: - Private Methods
     
     private func getActiveFeeds() async throws -> [Feed] {
-        return try await persistenceService.performBackgroundTask { context in
-            let request: NSFetchRequest<Feed> = Feed.fetchRequest()
-            request.predicate = NSPredicate(format: "isActive == YES")
-            request.sortDescriptors = [NSSortDescriptor(keyPath: \Feed.title, ascending: true)]
-            return try context.fetch(request)
-        }
+        // Fetch directly from main context since refreshAllFeeds() is already @MainActor
+        return try persistenceService.fetchActiveFeeds()
     }
     
     private func refreshFeeds(_ feeds: [Feed]) async -> RefreshResult {

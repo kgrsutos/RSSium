@@ -62,6 +62,7 @@ The `RSSService` supports:
 - XML security validations:
   - Data size limits (50MB max) to prevent XML bombs
   - XXE attack prevention (blocks external entities, DOCTYPE declarations)
+  - **IMPORTANT**: DOCTYPE declarations in CDATA sections (like HTML content in articles) are allowed - only raw XML DOCTYPE is blocked
   - Malicious content pattern detection
 - Async/await interface with background parsing
 
@@ -355,6 +356,8 @@ Current phase:
 - **Network**: URLSession with 30s request timeout, 60s resource timeout
 - **Testing**: Swift Testing framework (@Test) for all tests - **XCTest framework is forbidden**
 - **No external dependencies**: Pure Apple frameworks only
+- **Thread Safety**: Core Data operations use proper context isolation with `@MainActor` for ViewModels
+- **Memory Management**: Automatic memory pressure monitoring with configurable cleanup thresholds
 
 ## Service Layer Usage Patterns
 
@@ -433,6 +436,7 @@ Standard Xcode iOS app organization:
 - **Memory Management**: Configurable thresholds allow runtime optimization adjustment
 - **Core Data UI Updates**: When modifying Core Data objects in ViewModels, always call `objectWillChange.send()` to trigger SwiftUI updates
 - **Bookmark Data Persistence**: Bookmarked articles are permanently deleted when their parent feed is removed (cascade delete from Feed → Article). Consider warning users on feed deletion and/or decoupling bookmarks into a separate SavedItems store if you want bookmarks to persist after feed removal.
+- **Context Management**: Never use Core Data objects across different contexts - always use isolated test stacks for testing
 
 ### SwiftUI View Patterns
 

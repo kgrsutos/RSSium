@@ -195,16 +195,36 @@ class FeedListViewModel: ObservableObject {
                 }
             }
             
-            // Set appropriate success/error message
+            // Set appropriate success/info message
             if result.isCompleteSuccess {
                 errorMessage = nil
             } else if result.isPartialSuccess {
-                errorMessage = "Some feeds failed to refresh (\(result.failedFeeds)/\(result.totalFeeds))"
+                // Show info message for partial success (not an error dialog)
+                print("Partial success: \(result.successfulFeeds)/\(result.totalFeeds) feeds updated successfully")
+                errorMessage = nil // Don't show error dialog for partial success
             }
             
             loadFeeds()
             lastRefreshDate = Date()
             
+        } catch let refreshError as RefreshError {
+            // Handle specific refresh errors
+            switch refreshError {
+            case .completeFailure(let message):
+                errorMessage = "Failed to refresh feeds: \(message)"
+                lastFailedAction = { [weak self] in
+                    await self?.refreshAllFeeds()
+                }
+            case .networkUnavailable:
+                errorMessage = "No network connection available"
+            case .noActiveFeeds:
+                errorMessage = "No active feeds to refresh"
+            case .partialFailure(let failed, let total):
+                // This should no longer be thrown, but handle it just in case
+                print("Unexpected partial failure: \(failed)/\(total)")
+                loadFeeds()
+                lastRefreshDate = Date()
+            }
         } catch {
             handleGenericError(error, context: "refreshing all feeds")
             lastFailedAction = { [weak self] in

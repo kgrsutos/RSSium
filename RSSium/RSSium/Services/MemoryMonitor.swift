@@ -123,8 +123,6 @@ class MemoryMonitor: ObservableObject {
     // MARK: - Memory Cleanup
     
     func performMemoryCleanup() async {
-        print("Performing memory cleanup due to high memory usage")
-        
         // Clean up Core Data contexts
         PersistenceController.shared.optimizeMemoryUsage()
         PersistenceController.shared.cleanupBackgroundContexts()
