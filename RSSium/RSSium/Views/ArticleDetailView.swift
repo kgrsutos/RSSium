@@ -5,10 +5,10 @@ struct ArticleDetailView: View {
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @Environment(\.dismiss) private var dismiss
     
-    init(article: Article) {
+    init(article: Article, persistenceService: PersistenceService = PersistenceService()) {
         self._viewModel = StateObject(wrappedValue: ArticleDetailViewModel(
             article: article,
-            persistenceService: PersistenceService()
+            persistenceService: persistenceService
         ))
     }
     
@@ -160,7 +160,7 @@ struct ArticleDetailView: View {
                         }
                         .accessibilityLabel(viewModel.bookmarkText)
                         .accessibilityValue(viewModel.article.isBookmarked ? "Bookmarked" : "Not Bookmarked")
-                        .accessibilityAddTraits(viewModel.article.isBookmarked ? [.isButton, .isSelected] : [.isButton])
+                        .accessibilityAddTraits(viewModel.article.isBookmarked ? [.isSelected] : [])
                         .accessibilityHint("Toggle bookmark status of this article")
                         
                         // Read/Unread toggle with enhanced styling
@@ -174,13 +174,15 @@ struct ArticleDetailView: View {
                         .accessibilityHint("Toggle read status of this article")
                         
                         // Share button with enhanced styling
-                        ShareLink(item: viewModel.article.url ?? URL(string: "https://example.com")!) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.purple)
+                        if let url = viewModel.article.url {
+                            ShareLink(item: url) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.purple)
+                            }
+                            .accessibilityLabel("Share article")
+                            .accessibilityHint("Share this article with others")
                         }
-                        .accessibilityLabel("Share article")
-                        .accessibilityHint("Share this article with others")
                         
                         // Open in browser button with enhanced styling
                         if viewModel.hasURL {
@@ -195,14 +197,16 @@ struct ArticleDetailView: View {
                     }
                 }
             }
-            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-                Button("OK") {
-                    viewModel.clearError()
-                }
+            .alert(
+                "Error",
+                isPresented: Binding(
+                    get: { viewModel.errorMessage != nil },
+                    set: { if !$0 { viewModel.clearError() } }
+                )
+            ) {
+                Button("OK") { }
             } message: {
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                }
+                Text(viewModel.errorMessage ?? "")
             }
         }
     }

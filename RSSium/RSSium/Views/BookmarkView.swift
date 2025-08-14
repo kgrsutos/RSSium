@@ -45,7 +45,9 @@ struct BookmarkView: View {
                             }
                             .swipeActions(edge: .trailing) {
                                 Button {
-                                    viewModel.toggleBookmark(for: article)
+                                    withAnimation {
+                                        viewModel.toggleBookmark(for: article)
+                                    }
                                 } label: {
                                     Label("Remove Bookmark", systemImage: "star.slash")
                                 }

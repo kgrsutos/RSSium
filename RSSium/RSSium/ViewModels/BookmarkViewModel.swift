@@ -11,7 +11,6 @@ class BookmarkViewModel: ObservableObject {
     
     init(persistenceService: PersistenceService) {
         self.persistenceService = persistenceService
-        loadBookmarkedArticles()
     }
     
     func loadBookmarkedArticles() {
@@ -30,8 +29,14 @@ class BookmarkViewModel: ObservableObject {
     func toggleBookmark(for article: Article) {
         do {
             try persistenceService.toggleBookmark(article)
-            // Reload to reflect changes
-            loadBookmarkedArticles()
+            // Optimistically update local snapshot to avoid full refetch
+            if article.isBookmarked {
+                if !bookmarkedArticles.contains(where: { $0.objectID == article.objectID }) {
+                    bookmarkedArticles.insert(article, at: 0)
+                }
+            } else {
+                bookmarkedArticles.removeAll { $0.objectID == article.objectID }
+            }
         } catch {
             errorMessage = "Failed to toggle bookmark: \(error.localizedDescription)"
         }
@@ -41,11 +46,12 @@ class BookmarkViewModel: ObservableObject {
         errorMessage = nil
     }
     
-    // MARK: - Internal methods for testing
-    
+    // MARK: - Internal methods for testing (DEBUG only)
+    #if DEBUG
     internal func setErrorMessage(_ message: String?) {
         errorMessage = message
     }
+    #endif
     
     // MARK: - Computed Properties
     
