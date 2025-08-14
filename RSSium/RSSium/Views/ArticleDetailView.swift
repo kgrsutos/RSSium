@@ -159,6 +159,8 @@ struct ArticleDetailView: View {
                                 .symbolEffect(.bounce, value: viewModel.article.isBookmarked)
                         }
                         .accessibilityLabel(viewModel.bookmarkText)
+                        .accessibilityValue(viewModel.article.isBookmarked ? "Bookmarked" : "Not Bookmarked")
+                        .accessibilityAddTraits(viewModel.article.isBookmarked ? [.isButton, .isSelected] : [.isButton])
                         .accessibilityHint("Toggle bookmark status of this article")
                         
                         // Read/Unread toggle with enhanced styling

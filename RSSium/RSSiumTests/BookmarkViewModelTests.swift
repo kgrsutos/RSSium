@@ -148,7 +148,7 @@ struct BookmarkViewModelTests {
         let viewModel = BookmarkViewModel(persistenceService: persistenceService)
         
         // Simulate an error
-        viewModel.errorMessage = "Test error"
+        viewModel.setErrorMessage("Test error")
         #expect(viewModel.errorMessage == "Test error")
         
         // Clear error

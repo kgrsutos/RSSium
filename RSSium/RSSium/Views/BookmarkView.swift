@@ -10,7 +10,7 @@ struct BookmarkView: View {
     private var isShowingError: Binding<Bool> {
         Binding(
             get: { viewModel.errorMessage != nil },
-            set: { _ in viewModel.clearError() }
+            set: { if !$0 { viewModel.clearError() } }
         )
     }
     
@@ -44,9 +44,12 @@ struct BookmarkView: View {
                                 BookmarkArticleRow(article: article)
                             }
                             .swipeActions(edge: .trailing) {
-                                Button("Remove", role: .destructive) {
+                                Button {
                                     viewModel.toggleBookmark(for: article)
+                                } label: {
+                                    Label("Remove Bookmark", systemImage: "star.slash")
                                 }
+                                .tint(.red)
                             }
                         }
                     }
@@ -61,13 +64,9 @@ struct BookmarkView: View {
                 viewModel.loadBookmarkedArticles()
             }
             .alert("Error", isPresented: isShowingError) {
-                Button("OK") {
-                    viewModel.clearError()
-                }
+                Button("OK") { }
             } message: {
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                }
+                Text(viewModel.errorMessage ?? "")
             }
         }
     }

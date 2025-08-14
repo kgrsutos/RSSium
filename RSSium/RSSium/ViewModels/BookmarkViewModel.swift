@@ -1,11 +1,11 @@
 import Foundation
-import SwiftUI
+import Combine
 
 @MainActor
 class BookmarkViewModel: ObservableObject {
-    @Published var bookmarkedArticles: [Article] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
+    @Published private(set) var bookmarkedArticles: [Article] = []
+    @Published private(set) var isLoading = false
+    @Published private(set) var errorMessage: String?
     
     private let persistenceService: PersistenceService
     
@@ -39,6 +39,12 @@ class BookmarkViewModel: ObservableObject {
     
     func clearError() {
         errorMessage = nil
+    }
+    
+    // MARK: - Internal methods for testing
+    
+    internal func setErrorMessage(_ message: String?) {
+        errorMessage = message
     }
     
     // MARK: - Computed Properties

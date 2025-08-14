@@ -284,6 +284,7 @@ class PersistenceService {
     
     // MARK: - Bookmark Operations
     
+    @MainActor
     func toggleBookmark(_ article: Article) throws {
         let context = persistenceController.container.viewContext
         article.isBookmarked.toggle()
@@ -291,6 +292,7 @@ class PersistenceService {
         context.processPendingChanges()
     }
     
+    @MainActor
     func fetchBookmarkedArticles() throws -> [Article] {
         let context = persistenceController.container.viewContext
         let request: NSFetchRequest<Article> = Article.fetchRequest()
