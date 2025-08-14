@@ -40,7 +40,7 @@ struct BookmarkView: View {
                 } else {
                     List {
                         ForEach(viewModel.bookmarkedArticles, id: \.objectID) { article in
-                            NavigationLink(destination: ArticleDetailView(article: article)) {
+                            NavigationLink(destination: ArticleDetailView(article: article, persistenceService: viewModel.persistenceService)) {
                                 BookmarkArticleRow(article: article)
                             }
                             .swipeActions(edge: .trailing) {

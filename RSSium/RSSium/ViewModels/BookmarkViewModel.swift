@@ -7,7 +7,7 @@ class BookmarkViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     
-    private let persistenceService: PersistenceService
+    let persistenceService: PersistenceService
     
     init(persistenceService: PersistenceService) {
         self.persistenceService = persistenceService

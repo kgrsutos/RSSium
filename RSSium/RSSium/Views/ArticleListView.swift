@@ -5,11 +5,14 @@ struct ArticleListView: View {
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @State private var showingError = false
     @Environment(\.dismiss) private var dismiss
+    private let persistenceService: PersistenceService
     
     init(feed: Feed) {
+        let service = PersistenceService()
+        self.persistenceService = service
         self._viewModel = StateObject(wrappedValue: ArticleListViewModel(
             feed: feed,
-            persistenceService: PersistenceService(),
+            persistenceService: service,
             rssService: .shared,
             networkMonitor: .shared
         ))
@@ -149,7 +152,7 @@ struct ArticleListView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(viewModel.articles) { article in
-                        NavigationLink(destination: ArticleDetailView(article: article)) {
+                        NavigationLink(destination: ArticleDetailView(article: article, persistenceService: persistenceService)) {
                             ArticleCardView(article: article) {
                                 viewModel.toggleReadState(for: article)
                             }

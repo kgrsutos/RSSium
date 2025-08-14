@@ -5,7 +5,7 @@ struct ArticleDetailView: View {
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @Environment(\.dismiss) private var dismiss
     
-    init(article: Article, persistenceService: PersistenceService = PersistenceService()) {
+    init(article: Article, persistenceService: PersistenceService) {
         self._viewModel = StateObject(wrappedValue: ArticleDetailViewModel(
             article: article,
             persistenceService: persistenceService
@@ -230,5 +230,5 @@ struct ArticleDetailView: View {
     sampleArticle.isRead = false
     sampleArticle.feed = sampleFeed
     
-    return ArticleDetailView(article: sampleArticle)
+    return ArticleDetailView(article: sampleArticle, persistenceService: PersistenceService(persistenceController: PersistenceController.preview))
 }
