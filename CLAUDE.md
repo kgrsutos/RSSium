@@ -53,7 +53,15 @@ The `RSSService` supports:
 - RSS 2.0 and Atom 1.0 feed formats
 - Multiple date formats for compatibility
 - Comprehensive error handling with typed errors
-- URL validation and network timeout configuration
+- Enhanced URL validation with security features:
+  - Private/local network blocking (localhost, 192.168.x.x, 10.x.x.x, etc.)
+  - Suspicious domain filtering (.onion, URL shorteners)
+  - URL length limits (2000 chars max)
+  - Port validation for common RSS ports
+- XML security validations:
+  - Data size limits (50MB max) to prevent XML bombs
+  - XXE attack prevention (blocks external entities, DOCTYPE declarations)
+  - Malicious content pattern detection
 - Async/await interface with background parsing
 
 ### Performance & Optimization Services
@@ -61,7 +69,11 @@ The `RSSService` supports:
 The app includes comprehensive performance monitoring and optimization:
 
 - **ImageCacheService**: Dual-level caching (memory + disk) for feed icons with automatic cleanup
-- **MemoryMonitor**: Real-time memory pressure monitoring with automatic cache cleanup triggers
+- **MemoryMonitor**: Real-time memory pressure monitoring with configurable thresholds:
+  - Default thresholds: 80% warning, 90% cleanup
+  - Conservative thresholds: 70% warning, 80% cleanup  
+  - Aggressive thresholds: 90% warning, 95% cleanup
+  - Runtime threshold updates supported
 - **PerformanceOptimizer**: Centralized performance settings with user-configurable options
 - **BackgroundRefreshScheduler**: iOS Background App Refresh integration for automatic feed updates
 
@@ -159,13 +171,19 @@ xcodebuild test -project RSSium/RSSium.xcodeproj -scheme RSSium -destination 'pl
 
 ### UI Layer Architecture
 
-The presentation layer is implemented using SwiftUI with a clean separation of concerns:
+The presentation layer is implemented using SwiftUI with modular component architecture:
 
-- **FeedListView**: Main feed list interface with pull-to-refresh, swipe actions, and empty states
-  - Integrates with `FeedListViewModel` for data binding
-  - Displays feeds with unread count badges and last updated timestamps
-  - Provides swipe-to-delete, refresh actions, and context menus
-  - Handles loading states, error display, and empty state messaging
+- **FeedListView**: Main feed list interface - **recently refactored into components**
+  - Now uses `FeedListContentView` for main content display
+  - Toolbar components (`FeedListToolbar`, `RefreshAllButton`, `AddFeedButton`, `UnreadCountBadge`)
+  - Error handling components (`FeedListErrorAlert`, `FeedListErrorMessage`)
+  - Significantly reduced complexity through component separation
+- **FeedCardView**: **Extracted component** for individual feed display
+  - Standalone reusable component for feed cards
+  - Handles unread count badges, error states, and accessibility
+- **FeedListContentView**: **New component** containing main list logic
+  - Manages empty states, loading overlays, network status indicators
+  - Contains sub-components: `EmptyFeedListView`, `FeedScrollView`, `LoadingOverlay`, `NetworkStatusIndicator`
 - **AddFeedView**: Modal sheet for adding new RSS feeds
   - Real-time URL validation with visual feedback
   - Feed preview functionality before addition
@@ -205,9 +223,16 @@ The ViewModel layer implements MVVM pattern with reactive data binding:
 
 ### ViewModel Usage Patterns
 
+**CRITICAL**: All ViewModels require explicit dependency injection - no default singleton parameters allowed.
+
 ```swift
-// FeedListViewModel - Main feed management
-@StateObject private var feedListViewModel = FeedListViewModel()
+// FeedListViewModel - Main feed management with required dependencies
+@StateObject private var feedListViewModel = FeedListViewModel(
+    persistenceService: PersistenceService(),
+    rssService: .shared,
+    refreshService: .shared,
+    networkMonitor: .shared
+)
 
 // Access reactive properties
 feedListViewModel.feeds // @Published [Feed]
@@ -219,8 +244,11 @@ await feedListViewModel.addFeed(url: urlString)
 await feedListViewModel.refreshAllFeeds()
 feedListViewModel.deleteFeed(feed)
 
-// AddFeedViewModel - Feed addition
-@StateObject private var addFeedViewModel = AddFeedViewModel()
+// AddFeedViewModel - Feed addition with dependencies
+@StateObject private var addFeedViewModel = AddFeedViewModel(
+    rssService: .shared,
+    networkMonitor: .shared
+)
 await addFeedViewModel.validateFeed() // Previews feed before adding
 ```
 
@@ -286,11 +314,29 @@ try await service.performBackgroundTask { context in
 ```swift
 let rssService = RSSService.shared
 
-// Validate URL first
+// Validate URL first (includes security checks)
 guard rssService.validateFeedURL(urlString) else { return }
 
-// Parse feed
+// Parse feed (includes XML security validation)
 let channel = try await rssService.fetchAndParseFeed(from: urlString)
+```
+
+### MemoryMonitor Configuration
+```swift
+let memoryMonitor = MemoryMonitor.shared
+
+// Get current thresholds
+let currentThresholds = memoryMonitor.currentThresholds
+
+// Update to conservative settings for memory-constrained devices
+memoryMonitor.updateThresholds(.conservative)
+
+// Update to custom thresholds
+let customThresholds = MemoryMonitor.MemoryThresholds(
+    warningThreshold: 0.75,
+    cleanupThreshold: 0.85
+)
+memoryMonitor.updateThresholds(customThresholds)
 ```
 
 ## Project Structure
@@ -302,6 +348,7 @@ Standard Xcode iOS app organization:
 - Services: PersistenceService, RSSService, RefreshService, NetworkMonitor, ImageCacheService, BackgroundRefreshScheduler, PerformanceOptimizer, MemoryMonitor
 - ViewModels: FeedListViewModel, AddFeedViewModel, ArticleListViewModel, ArticleDetailViewModel
 - Views: FeedListView, AddFeedView, ArticleListView, ArticleDetailView, SettingsView, SplashView
+- Components: FeedCardView, FeedListContentView (in Views/Components/)
 - Extensions: Color+RSSium for app-wide theming
 
 ### Important Implementation Notes
@@ -311,6 +358,10 @@ Standard Xcode iOS app organization:
 - **Background Operations**: Use `PersistenceService.performBackgroundTask` for heavy Core Data operations
 - **Error Propagation**: ViewModels expose `@Published errorMessage` for UI error display
 - **Async Patterns**: ViewModels use async/await for network operations, avoid blocking UI
+- **Dependency Injection**: All ViewModels require explicit dependencies - no default singleton parameters
+- **Security**: URL validation includes comprehensive security checks for malicious content
+- **Component Architecture**: Large views are decomposed into smaller, reusable components
+- **Memory Management**: Configurable thresholds allow runtime optimization adjustment
 
 ### SwiftUI View Patterns
 
