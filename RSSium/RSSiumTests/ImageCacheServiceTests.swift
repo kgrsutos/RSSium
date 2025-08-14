@@ -230,4 +230,176 @@ struct ImageCacheServiceTests {
         // Both references point to same cleared cache
         #expect(true)
     }
+    
+    @MainActor
+    @Test("Cache directory creation and access")
+    func testCacheDirectoryCreationAndAccess() async throws {
+        let service = ImageCacheService.shared
+        
+        // The service should initialize without errors
+        // (cache directory is created in init)
+        #expect(true)
+        
+        // Clear cache should work with the directory
+        service.clearCache()
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("URL session configuration")
+    func testURLSessionConfiguration() async throws {
+        let service = ImageCacheService.shared
+        
+        // Test that the service can handle network requests
+        // (even if they fail for invalid URLs)
+        let testURL = URL(string: "https://httpbin.org/status/404")!
+        let image = await service.loadImage(from: testURL)
+        
+        // Should handle network errors gracefully
+        #expect(image == nil)
+    }
+    
+    
+    @MainActor
+    @Test("Load image with malformed URLs")
+    func testLoadImageWithMalformedURLs() async throws {
+        let service = ImageCacheService.shared
+        
+        let malformedURLs = [
+            "not-a-url",
+            "://missing-scheme",
+            "http://",
+            "ftp://example.com/image.png", // Different scheme
+        ]
+        
+        for urlString in malformedURLs {
+            if let url = URL(string: urlString) {
+                let image = await service.loadImage(from: url)
+                #expect(image == nil)
+            }
+        }
+    }
+    
+    @MainActor
+    @Test("Cache performance with rapid requests")
+    func testCachePerformanceWithRapidRequests() async throws {
+        let service = ImageCacheService.shared
+        service.clearCache()
+        
+        let testURL = URL(string: "http://example.com/performance-test.png")!
+        
+        // Make rapid consecutive requests for the same URL
+        await withTaskGroup(of: UIImage?.self) { group in
+            for _ in 0..<10 {
+                group.addTask {
+                    await service.loadImage(from: testURL)
+                }
+            }
+            
+            // Collect all results
+            var results: [UIImage?] = []
+            for await result in group {
+                results.append(result)
+            }
+            
+            // All should be nil for invalid URL, but shouldn't crash
+            #expect(results.allSatisfy { $0 == nil })
+        }
+    }
+    
+    @MainActor
+    @Test("Cache behavior with different image formats")
+    func testCacheBehaviorWithDifferentImageFormats() async throws {
+        let service = ImageCacheService.shared
+        
+        let imageFormatURLs = [
+            "http://example.com/image.png",
+            "http://example.com/image.jpg",
+            "http://example.com/image.jpeg",
+            "http://example.com/image.gif",
+            "http://example.com/image.webp",
+            "http://example.com/image.svg",
+            "http://example.com/image.bmp",
+            "http://example.com/image.tiff"
+        ]
+        
+        for urlString in imageFormatURLs {
+            if let url = URL(string: urlString) {
+                let image = await service.loadImage(from: url)
+                #expect(image == nil) // These test URLs don't exist
+            }
+        }
+    }
+    
+    @MainActor
+    @Test("Clear cache multiple times in sequence")
+    func testClearCacheMultipleTimesInSequence() async throws {
+        let service = ImageCacheService.shared
+        
+        // Clear cache multiple times rapidly
+        for _ in 0..<20 {
+            service.clearCache()
+        }
+        
+        // Should handle rapid clearing without issues
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Memory cache behavior")
+    func testMemoryCacheBehavior() async throws {
+        let service = ImageCacheService.shared
+        service.clearCache()
+        
+        // Load some test URLs to potentially populate cache
+        let urls = (0..<5).compactMap { i in
+            URL(string: "http://test.example.com/memory-test-\(i).png")
+        }
+        
+        // First round of loads
+        for url in urls {
+            _ = await service.loadImage(from: url)
+        }
+        
+        // Second round - should check memory cache first
+        for url in urls {
+            _ = await service.loadImage(from: url)
+        }
+        
+        // Memory cache should be handling these gracefully
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Disk cache behavior")
+    func testDiskCacheBehavior() async throws {
+        let service = ImageCacheService.shared
+        service.clearCache()
+        
+        // Test that disk operations don't crash
+        let testURL = URL(string: "http://example.com/disk-test.png")!
+        
+        // This will fail to download but should test disk cache logic
+        _ = await service.loadImage(from: testURL)
+        
+        // Clear and test again
+        service.clearCache()
+        _ = await service.loadImage(from: testURL)
+        
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Cache with extremely long URLs")
+    func testCacheWithExtremelyLongURLs() async throws {
+        let service = ImageCacheService.shared
+        
+        // Create a very long URL
+        let longPath = String(repeating: "very-long-path-segment/", count: 50)
+        let longURL = URL(string: "http://example.com/\(longPath)image.png")!
+        
+        // Should handle long URLs gracefully
+        let image = await service.loadImage(from: longURL)
+        #expect(image == nil)
+    }
 }

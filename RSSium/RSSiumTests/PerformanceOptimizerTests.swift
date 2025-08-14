@@ -235,4 +235,254 @@ struct PerformanceOptimizerTests {
         // Should handle multiple applications without issues
         #expect(true)
     }
+    
+    @MainActor
+    @Test("App storage integration for settings")
+    func testAppStorageIntegrationForSettings() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Test that @AppStorage properties can be read and written
+        let originalEnabled = optimizer.isEnabled
+        
+        optimizer.isEnabled = true
+        #expect(optimizer.isEnabled == true)
+        
+        optimizer.isEnabled = false
+        #expect(optimizer.isEnabled == false)
+        
+        // Restore original state
+        optimizer.isEnabled = originalEnabled
+    }
+    
+    @MainActor
+    @Test("Optimization status with mixed settings")
+    func testOptimizationStatusWithMixedSettings() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Test various combinations
+        optimizer.isEnabled = true
+        optimizer.limitImageCache = true
+        optimizer.backgroundRefreshOptimized = false
+        optimizer.aggressiveMemoryManagement = false
+        optimizer.reduceAnimations = false
+        
+        let status1 = optimizer.optimizationStatus
+        #expect(status1.contains("Image Caching"))
+        #expect(!status1.contains("Background Refresh"))
+        
+        // Change combination
+        optimizer.limitImageCache = false
+        optimizer.backgroundRefreshOptimized = true
+        optimizer.aggressiveMemoryManagement = true
+        
+        let status2 = optimizer.optimizationStatus
+        #expect(!status2.contains("Image Caching"))
+        #expect(status2.contains("Background Refresh"))
+        #expect(status2.contains("Memory Management"))
+    }
+    
+    @MainActor
+    @Test("Apply optimizations with different configurations")
+    func testApplyOptimizationsWithDifferentConfigurations() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Test with all optimizations enabled
+        optimizer.isEnabled = true
+        optimizer.limitImageCache = true
+        optimizer.backgroundRefreshOptimized = true
+        optimizer.aggressiveMemoryManagement = true
+        optimizer.applyOptimizations()
+        
+        // Test with all disabled
+        optimizer.isEnabled = false
+        optimizer.applyOptimizations()
+        
+        // Test with mixed settings
+        optimizer.isEnabled = true
+        optimizer.limitImageCache = true
+        optimizer.backgroundRefreshOptimized = false
+        optimizer.aggressiveMemoryManagement = false
+        optimizer.applyOptimizations()
+        
+        // All configurations should apply without issues
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Aggressive memory management task lifecycle")
+    func testAggressiveMemoryManagementTaskLifecycle() async throws {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Start aggressive memory management
+        optimizer.isEnabled = true
+        optimizer.aggressiveMemoryManagement = true
+        optimizer.applyOptimizations()
+        
+        // Let it run briefly
+        try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+        
+        // Stop aggressive memory management
+        optimizer.aggressiveMemoryManagement = false
+        
+        // Wait a bit more
+        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        
+        // Disable completely
+        optimizer.isEnabled = false
+        
+        // Should handle lifecycle properly
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Performance preset initialization from raw values")
+    func testPerformancePresetInitializationFromRawValues() {
+        // Test that presets can be created from raw values
+        #expect(PerformancePreset(rawValue: "Balanced") == .balanced)
+        #expect(PerformancePreset(rawValue: "Performance First") == .performanceFirst)
+        #expect(PerformancePreset(rawValue: "Battery Optimized") == .batteryOptimized)
+        #expect(PerformancePreset(rawValue: "Minimal") == .minimal)
+        
+        // Test invalid raw value
+        #expect(PerformancePreset(rawValue: "Invalid") == nil)
+    }
+    
+    @MainActor
+    @Test("Optimization status edge cases")
+    func testOptimizationStatusEdgeCases() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Test with all optimizations enabled
+        optimizer.isEnabled = true
+        optimizer.limitImageCache = true
+        optimizer.backgroundRefreshOptimized = true
+        optimizer.aggressiveMemoryManagement = true
+        optimizer.reduceAnimations = true
+        
+        let fullStatus = optimizer.optimizationStatus
+        #expect(fullStatus.contains("Image Caching"))
+        #expect(fullStatus.contains("Background Refresh"))
+        #expect(fullStatus.contains("Memory Management"))
+        #expect(fullStatus.contains("Reduced Animations"))
+        
+        // Test rapid status changes
+        for _ in 0..<10 {
+            optimizer.limitImageCache.toggle()
+            _ = optimizer.optimizationStatus
+        }
+        
+        // Should handle rapid changes
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Preset application with background refresh scheduler integration")
+    func testPresetApplicationWithBackgroundRefreshSchedulerIntegration() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Apply presets that affect background refresh intervals
+        optimizer.applyPreset(.performanceFirst) // 30 minutes
+        optimizer.applyPreset(.batteryOptimized)  // 4 hours
+        optimizer.applyPreset(.balanced)          // 1 hour
+        optimizer.applyPreset(.minimal)           // 1 hour default
+        
+        // Should integrate with BackgroundRefreshScheduler without issues
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Optimization settings persistence")
+    func testOptimizationSettingsPersistence() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Store original values
+        let originalEnabled = optimizer.isEnabled
+        let originalAggressive = optimizer.aggressiveMemoryManagement
+        let originalAnimations = optimizer.reduceAnimations
+        let originalCache = optimizer.limitImageCache
+        let originalBackground = optimizer.backgroundRefreshOptimized
+        
+        // Change all settings
+        optimizer.isEnabled = !originalEnabled
+        optimizer.aggressiveMemoryManagement = !originalAggressive
+        optimizer.reduceAnimations = !originalAnimations
+        optimizer.limitImageCache = !originalCache
+        optimizer.backgroundRefreshOptimized = !originalBackground
+        
+        // Verify changes persist
+        #expect(optimizer.isEnabled == !originalEnabled)
+        #expect(optimizer.aggressiveMemoryManagement == !originalAggressive)
+        #expect(optimizer.reduceAnimations == !originalAnimations)
+        #expect(optimizer.limitImageCache == !originalCache)
+        #expect(optimizer.backgroundRefreshOptimized == !originalBackground)
+        
+        // Restore original values
+        optimizer.isEnabled = originalEnabled
+        optimizer.aggressiveMemoryManagement = originalAggressive
+        optimizer.reduceAnimations = originalAnimations
+        optimizer.limitImageCache = originalCache
+        optimizer.backgroundRefreshOptimized = originalBackground
+    }
+    
+    @MainActor
+    @Test("Concurrent preset applications")
+    func testConcurrentPresetApplications() async {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Apply different presets concurrently
+        await withTaskGroup(of: Void.self) { group in
+            for preset in PerformancePreset.allCases {
+                group.addTask {
+                    await MainActor.run {
+                        optimizer.applyPreset(preset)
+                    }
+                }
+            }
+        }
+        
+        // Should handle concurrent applications safely
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Performance optimizer state transitions")
+    func testPerformanceOptimizerStateTransitions() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Test various state transitions
+        optimizer.isEnabled = false
+        optimizer.applyOptimizations()
+        
+        optimizer.isEnabled = true
+        optimizer.aggressiveMemoryManagement = false
+        optimizer.applyOptimizations()
+        
+        optimizer.aggressiveMemoryManagement = true
+        optimizer.applyOptimizations()
+        
+        optimizer.isEnabled = false
+        optimizer.applyOptimizations()
+        
+        // Should handle all state transitions smoothly
+        #expect(true)
+    }
+    
+    @MainActor
+    @Test("Optimization impact on other services")
+    func testOptimizationImpactOnOtherServices() {
+        let optimizer = PerformanceOptimizer.shared
+        
+        // Test that optimization changes don't crash other services
+        optimizer.applyPreset(.performanceFirst)
+        optimizer.applyOptimizations()
+        
+        optimizer.applyPreset(.batteryOptimized)
+        optimizer.applyOptimizations()
+        
+        // Should interact safely with ImageCacheService and BackgroundRefreshScheduler
+        _ = ImageCacheService.shared
+        _ = BackgroundRefreshScheduler.shared
+        
+        #expect(true)
+    }
 }

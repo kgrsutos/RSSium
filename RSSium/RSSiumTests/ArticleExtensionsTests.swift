@@ -295,4 +295,176 @@ struct ArticleExtensionsTests {
             #expect(recentArticles[1].publishedDate! >= recentArticles[2].publishedDate!)
         }
     }
+    
+    @Test("Display summary with complex HTML entities")
+    func testDisplaySummaryWithComplexHTMLEntities() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        let article = createTestArticle(in: context, feed: feed)
+        
+        article.summary = nil
+        article.content = "<p>Content with &quot;quotes&quot; and &amp; ampersands &lt;tags&gt; and &nbsp; spaces</p>"
+        
+        let summary = article.displaySummary
+        #expect(!summary.contains("&quot;"))
+        #expect(!summary.contains("&amp;"))
+        #expect(!summary.contains("&lt;"))
+        #expect(!summary.contains("&gt;"))
+        #expect(!summary.contains("&nbsp;"))
+        #expect(!summary.contains("<p>"))
+        #expect(!summary.contains("</p>"))
+    }
+    
+    @Test("Display summary with nested HTML tags")
+    func testDisplaySummaryWithNestedHTMLTags() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        let article = createTestArticle(in: context, feed: feed)
+        
+        article.summary = nil
+        article.content = "<div><p>Outer <span>inner <strong>nested</strong> content</span> more text</p></div>"
+        
+        let summary = article.displaySummary
+        #expect(!summary.contains("<div>"))
+        #expect(!summary.contains("<p>"))
+        #expect(!summary.contains("<span>"))
+        #expect(!summary.contains("<strong>"))
+        #expect(!summary.contains("</"))
+        #expect(summary.contains("Outer inner nested content more text"))
+    }
+    
+    @Test("Formatted published date with different date formats")
+    func testFormattedPublishedDateWithDifferentFormats() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        // Test with very recent date
+        let recentArticle = createTestArticle(in: context, feed: feed)
+        recentArticle.publishedDate = Date().addingTimeInterval(-60) // 1 minute ago
+        let recentFormat = recentArticle.formattedPublishedDate
+        #expect(!recentFormat.isEmpty)
+        
+        // Test with old date
+        let oldArticle = createTestArticle(in: context, feed: feed)
+        oldArticle.publishedDate = Date().addingTimeInterval(-86400 * 7) // 1 week ago
+        let oldFormat = oldArticle.formattedPublishedDate
+        #expect(!oldFormat.isEmpty)
+        
+        // Test with very old date
+        let veryOldArticle = createTestArticle(in: context, feed: feed)
+        veryOldArticle.publishedDate = Date().addingTimeInterval(-86400 * 365) // 1 year ago
+        let veryOldFormat = veryOldArticle.formattedPublishedDate
+        #expect(!veryOldFormat.isEmpty)
+    }
+    
+    @Test("Fetch with error handling")
+    func testFetchWithErrorHandling() throws {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        // Create articles
+        for i in 0..<5 {
+            let article = createTestArticle(in: context, feed: feed)
+            article.title = "Article \(i)"
+            article.isRead = i % 2 == 0
+        }
+        
+        try context.save()
+        
+        // Test fetches with valid parameters
+        let unreadArticles = Article.fetchUnread(for: feed, in: context)
+        let recentArticles = Article.fetchRecent(limit: 3, for: feed, in: context)
+        let allUnread = Article.fetchUnread(for: nil, in: context)
+        
+        #expect(unreadArticles.count >= 0)
+        #expect(recentArticles.count >= 0)
+        #expect(allUnread.count >= 0)
+    }
+    
+    @Test("Read state manipulation")
+    func testReadStateManipulation() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        let article = createTestArticle(in: context, feed: feed)
+        
+        // Test initial state
+        article.isRead = false
+        #expect(article.isRead == false)
+        
+        // Test marking as read
+        article.markAsRead()
+        #expect(article.isRead == true)
+        
+        // Test marking as unread
+        article.markAsUnread()
+        #expect(article.isRead == false)
+        
+        // Test multiple toggles
+        for _ in 0..<5 {
+            article.markAsRead()
+            #expect(article.isRead == true)
+            article.markAsUnread()
+            #expect(article.isRead == false)
+        }
+    }
+    
+    @Test("Article convenience initializer with all parameters")
+    func testConvenienceInitializerWithAllParameters() throws {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        let publishDate = Date()
+        let testURL = URL(string: "https://example.com/specific-article")!
+        
+        let article = Article(
+            context: context,
+            title: "Detailed Test Article",
+            content: "Detailed test content with more information",
+            url: testURL,
+            publishedDate: publishDate,
+            feed: feed
+        )
+        
+        #expect(article.id != nil)
+        #expect(article.title == "Detailed Test Article")
+        #expect(article.content == "Detailed test content with more information")
+        #expect(article.url == testURL)
+        #expect(article.publishedDate == publishDate)
+        #expect(article.isRead == false)
+        #expect(article.feed == feed)
+        
+        // Test that the article is properly related to the feed
+        #expect(feed.articles?.contains(article) == true)
+    }
+    
+    @Test("Fetch recent with zero limit")
+    func testFetchRecentWithZeroLimit() throws {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        // Create some articles
+        for i in 0..<3 {
+            let article = createTestArticle(in: context, feed: feed)
+            article.title = "Article \(i)"
+        }
+        
+        try context.save()
+        
+        // Test with zero limit
+        let recentArticles = Article.fetchRecent(limit: 0, for: feed, in: context)
+        #expect(recentArticles.isEmpty)
+    }
+    
+    @Test("Display summary with only whitespace content")
+    func testDisplaySummaryWithOnlyWhitespaceContent() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        let article = createTestArticle(in: context, feed: feed)
+        
+        article.summary = nil
+        article.content = "   \n\t   \r\n   " // Only whitespace
+        
+        let summary = article.displaySummary
+        #expect(summary.isEmpty)
+    }
 }

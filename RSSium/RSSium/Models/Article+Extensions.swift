@@ -61,6 +61,11 @@ extension Article {
     }
     
     static func fetchRecent(limit: Int = 50, for feed: Feed? = nil, in context: NSManagedObjectContext) -> [Article] {
+        // Handle zero limit case
+        guard limit > 0 else {
+            return []
+        }
+        
         let request: NSFetchRequest<Article> = Article.fetchRequest()
         
         if let feed = feed {

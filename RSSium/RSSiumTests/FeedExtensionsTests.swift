@@ -297,4 +297,217 @@ struct FeedExtensionsTests {
         let activeFeeds = Feed.fetchAllActive(context: context)
         #expect(activeFeeds.isEmpty)
     }
+    
+    @Test("Articles array with empty articles set")
+    func testArticlesArrayWithEmptyArticlesSet() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        // No articles added
+        let articles = feed.articlesArray
+        #expect(articles.isEmpty)
+    }
+    
+    @Test("Feed convenience initializer with all fields")
+    func testConvenienceInitializerWithAllFields() {
+        let (_, context) = createTestStack()
+        
+        let feedURL = URL(string: "https://detailed-example.com/rss-feed.xml")!
+        let feed = Feed(context: context, title: "Detailed Test Feed", url: feedURL)
+        
+        // Verify all fields are set correctly
+        #expect(feed.id != nil)
+        #expect(feed.title == "Detailed Test Feed")
+        #expect(feed.url == feedURL)
+        #expect(feed.lastUpdated != nil)
+        #expect(feed.isActive == true)
+        
+        // Verify date is recent
+        let timeDiff = abs(feed.lastUpdated!.timeIntervalSinceNow)
+        #expect(timeDiff < 1.0) // Should be set within the last second
+    }
+    
+    @Test("Unread count with large number of articles")
+    func testUnreadCountWithLargeNumberOfArticles() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        // Create many articles with mixed read states
+        for i in 0..<100 {
+            let article = createTestArticle(in: context, feed: feed, isRead: i % 3 == 0)
+        }
+        
+        let unreadCount = feed.unreadCount
+        let expectedUnread = 100 - (100 / 3) // Approximately 67 unread articles
+        #expect(unreadCount > 60 && unreadCount < 70)
+        
+        let hasUnread = feed.hasUnreadArticles
+        #expect(hasUnread == true)
+    }
+    
+    @Test("Feed exists with similar but different URLs")
+    func testFeedExistsWithSimilarURLs() throws {
+        let (_, context) = createTestStack()
+        
+        let originalURL = URL(string: "https://example.com/feed.xml")!
+        let similarURL1 = URL(string: "https://example.com/feed.xml?param=value")!
+        let similarURL2 = URL(string: "https://example.com/feed.xml#fragment")!
+        let differentURL = URL(string: "https://different.com/feed.xml")!
+        
+        let feed = createTestFeed(in: context)
+        feed.url = originalURL
+        
+        try context.save()
+        
+        // Only exact URL match should return true
+        #expect(Feed.feedExists(with: originalURL, in: context) == true)
+        #expect(Feed.feedExists(with: similarURL1, in: context) == false)
+        #expect(Feed.feedExists(with: similarURL2, in: context) == false)
+        #expect(Feed.feedExists(with: differentURL, in: context) == false)
+    }
+    
+    @Test("Articles array sorting with complex date scenarios")
+    func testArticlesArraySortingWithComplexDateScenarios() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        // Create articles with various date scenarios
+        let futureArticle = createTestArticle(
+            in: context,
+            feed: feed,
+            publishedDate: Date().addingTimeInterval(3600) // 1 hour in future
+        )
+        
+        let currentArticle = createTestArticle(
+            in: context,
+            feed: feed,
+            publishedDate: Date()
+        )
+        
+        let pastArticle = createTestArticle(
+            in: context,
+            feed: feed,
+            publishedDate: Date().addingTimeInterval(-3600) // 1 hour ago
+        )
+        
+        let veryOldArticle = createTestArticle(
+            in: context,
+            feed: feed,
+            publishedDate: Date().addingTimeInterval(-86400 * 30) // 30 days ago
+        )
+        
+        let articles = feed.articlesArray
+        
+        #expect(articles.count == 4)
+        if articles.count == 4 {
+            // Should be sorted newest first (including future dates)
+            #expect(articles[0] == futureArticle)
+            #expect(articles[1] == currentArticle)
+            #expect(articles[2] == pastArticle)
+            #expect(articles[3] == veryOldArticle)
+        }
+    }
+    
+    @Test("Fetch active feeds with mixed active states")
+    func testFetchActiveFeedsWithMixedActiveStates() throws {
+        let (_, context) = createTestStack()
+        
+        let activeFeed1 = createTestFeed(in: context, title: "Active 1")
+        activeFeed1.isActive = true
+        
+        let inactiveFeed = createTestFeed(in: context, title: "Inactive")
+        inactiveFeed.isActive = false
+        
+        let activeFeed2 = createTestFeed(in: context, title: "Active 2")
+        activeFeed2.isActive = true
+        
+        let activeFeed3 = createTestFeed(in: context, title: "Active 3")
+        activeFeed3.isActive = true
+        
+        let inactiveFeed2 = createTestFeed(in: context, title: "Inactive 2")
+        inactiveFeed2.isActive = false
+        
+        try context.save()
+        
+        let activeFeeds = Feed.fetchAllActive(context: context)
+        
+        #expect(activeFeeds.count == 3)
+        #expect(activeFeeds.allSatisfy { $0.isActive })
+        
+        let activeTitles = Set(activeFeeds.map { $0.title! })
+        #expect(activeTitles.contains("Active 1"))
+        #expect(activeTitles.contains("Active 2"))
+        #expect(activeTitles.contains("Active 3"))
+        #expect(!activeTitles.contains("Inactive"))
+        #expect(!activeTitles.contains("Inactive 2"))
+    }
+    
+    
+    @Test("Unread count edge cases")
+    func testUnreadCountEdgeCases() {
+        let (_, context) = createTestStack()
+        let feed = createTestFeed(in: context)
+        
+        // Test with all read articles
+        for _ in 0..<5 {
+            _ = createTestArticle(in: context, feed: feed, isRead: true)
+        }
+        
+        #expect(feed.unreadCount == 0)
+        #expect(feed.hasUnreadArticles == false)
+        
+        // Add one unread article
+        _ = createTestArticle(in: context, feed: feed, isRead: false)
+        
+        #expect(feed.unreadCount == 1)
+        #expect(feed.hasUnreadArticles == true)
+        
+        // Test with all unread articles
+        let feed2 = createTestFeed(in: context, title: "Feed 2")
+        for _ in 0..<3 {
+            _ = createTestArticle(in: context, feed: feed2, isRead: false)
+        }
+        
+        #expect(feed2.unreadCount == 3)
+        #expect(feed2.hasUnreadArticles == true)
+    }
+    
+    @Test("Feed URL normalization and comparison")
+    func testFeedURLNormalizationAndComparison() throws {
+        let (_, context) = createTestStack()
+        
+        // Test that URL comparison is exact
+        let baseURL = URL(string: "https://example.com/feed.xml")!
+        let uppercaseURL = URL(string: "https://EXAMPLE.COM/feed.xml")!
+        
+        let feed = createTestFeed(in: context)
+        feed.url = baseURL
+        
+        try context.save()
+        
+        #expect(Feed.feedExists(with: baseURL, in: context) == true)
+        #expect(Feed.feedExists(with: uppercaseURL, in: context) == false)
+    }
+    
+    @Test("Performance with large number of feeds")
+    func testPerformanceWithLargeNumberOfFeeds() throws {
+        let (_, context) = createTestStack()
+        
+        // Create many feeds
+        for i in 0..<100 {
+            let feed = createTestFeed(in: context, title: "Feed \(i)")
+            feed.isActive = i % 2 == 0 // Half active, half inactive
+        }
+        
+        try context.save()
+        
+        let startTime = Date()
+        let activeFeeds = Feed.fetchAllActive(context: context)
+        let endTime = Date()
+        
+        #expect(activeFeeds.count == 50) // Half should be active
+        
+        let executionTime = endTime.timeIntervalSince(startTime)
+        #expect(executionTime < 1.0) // Should execute quickly
+    }
 }

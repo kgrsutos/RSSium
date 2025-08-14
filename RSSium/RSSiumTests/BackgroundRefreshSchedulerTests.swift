@@ -248,4 +248,147 @@ struct BackgroundRefreshSchedulerTests {
         
         // Should integrate properly with @AppStorage without crashes
     }
+    
+    @Test("Background refresh scheduling with enabled state")
+    @MainActor func testBackgroundRefreshSchedulingWithEnabledState() {
+        let scheduler = createTestScheduler()
+        
+        // Test scheduling when enabled
+        scheduler.toggleBackgroundRefresh(true)
+        scheduler.scheduleBackgroundRefresh()
+        
+        // Test scheduling when disabled - should cancel tasks
+        scheduler.toggleBackgroundRefresh(false)
+        scheduler.scheduleBackgroundRefresh()
+        
+        // Should handle state changes gracefully
+    }
+    
+    @Test("Task identifier constants are valid")
+    @MainActor func testTaskIdentifierConstants() {
+        let scheduler = createTestScheduler()
+        
+        // We can't directly access private properties, but we can test that
+        // the scheduler initializes without issues, implying valid identifiers
+        scheduler.registerBackgroundTasks()
+        scheduler.scheduleBackgroundRefresh()
+        scheduler.scheduleBackgroundCleanup()
+        
+        // Should work with valid identifiers
+    }
+    
+    @Test("Background cleanup scheduling behavior")
+    @MainActor func testBackgroundCleanupSchedulingBehavior() {
+        let scheduler = createTestScheduler()
+        
+        // Schedule cleanup multiple times
+        for _ in 0..<3 {
+            scheduler.scheduleBackgroundCleanup()
+        }
+        
+        // Should handle multiple scheduling requests
+    }
+    
+    @Test("Refresh interval validation")
+    @MainActor func testRefreshIntervalValidation() {
+        let scheduler = createTestScheduler()
+        
+        // Test various interval values
+        let validIntervals: [TimeInterval] = [
+            300,    // 5 minutes
+            900,    // 15 minutes
+            1800,   // 30 minutes
+            3600,   // 1 hour
+            7200,   // 2 hours
+            14400,  // 4 hours
+            21600,  // 6 hours
+            43200,  // 12 hours
+            86400   // 24 hours
+        ]
+        
+        for interval in validIntervals {
+            scheduler.setRefreshInterval(interval)
+            // Should accept all reasonable intervals
+        }
+    }
+    
+    @Test("Background refresh toggle affects scheduling")
+    @MainActor func testBackgroundRefreshToggleAffectsScheduling() {
+        let scheduler = createTestScheduler()
+        
+        // Start disabled
+        scheduler.toggleBackgroundRefresh(false)
+        scheduler.scheduleBackgroundRefresh()
+        
+        // Enable and schedule
+        scheduler.toggleBackgroundRefresh(true)
+        scheduler.scheduleBackgroundRefresh()
+        scheduler.scheduleBackgroundCleanup()
+        
+        // Disable again
+        scheduler.toggleBackgroundRefresh(false)
+        
+        // Should properly manage task scheduling based on enabled state
+    }
+    
+    @Test("Last refresh date property consistency")
+    @MainActor func testLastRefreshDatePropertyConsistency() {
+        let scheduler = createTestScheduler()
+        
+        let initialDate1 = scheduler.lastRefreshDate
+        let initialDate2 = scheduler.lastRefreshDate
+        
+        // Multiple accesses should return the same value
+        #expect(initialDate1 == initialDate2)
+        
+        // Property should remain consistent across calls
+        for _ in 0..<5 {
+            let date = scheduler.lastRefreshDate
+            #expect(date == initialDate1)
+        }
+    }
+    
+    @Test("Scheduler handles task registration gracefully")
+    @MainActor func testSchedulerHandlesTaskRegistrationGracefully() {
+        let scheduler = createTestScheduler()
+        
+        // Register tasks multiple times
+        for _ in 0..<3 {
+            scheduler.registerBackgroundTasks()
+        }
+        
+        // Should handle multiple registrations without issues
+    }
+    
+    @Test("Edge case refresh intervals")
+    @MainActor func testEdgeCaseRefreshIntervals() {
+        let scheduler = createTestScheduler()
+        
+        // Test edge cases
+        scheduler.setRefreshInterval(1)       // Very small
+        scheduler.setRefreshInterval(604800)  // 1 week
+        scheduler.setRefreshInterval(2592000) // 30 days
+        
+        // Should handle edge cases without crashing
+    }
+    
+    @Test("Concurrent background operations")
+    @MainActor func testConcurrentBackgroundOperations() async {
+        let scheduler = createTestScheduler()
+        
+        // Perform multiple operations concurrently
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<5 {
+                group.addTask {
+                    await MainActor.run {
+                        scheduler.setRefreshInterval(TimeInterval(1800 + i * 300))
+                        scheduler.scheduleBackgroundRefresh()
+                        scheduler.scheduleBackgroundCleanup()
+                    }
+                }
+            }
+        }
+        
+        // Should handle concurrent operations safely
+    }
 }

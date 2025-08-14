@@ -24,7 +24,7 @@ class AddFeedViewModel: ObservableObject {
     }
     
     var finalTitle: String {
-        useCustomTitle && !customTitle.isEmpty ? customTitle : previewTitle
+        useCustomTitle && !customTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? customTitle.trimmingCharacters(in: .whitespacesAndNewlines) : previewTitle
     }
     
     var canSubmit: Bool {
